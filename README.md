@@ -1,26 +1,26 @@
 # Junction 2026 · Hiking Route Planner
 
-Приложение помогает собрать пешеходный маршрут через интересные места и увидеть фотографии по пути с авторами и ссылками на источники. Пользователь описывает пожелания в чате или выбирает места на карте. Название проекта уточняется командой.
+Plan a hiking route through interesting places and see photos along the way, with authors and source links. Describe your preferences in chat or choose places on a map. The team is still deciding on the product name.
 
-Демонстрационный сценарий проходит через Высокие Татры — из Штрбске Плесо на Рысы с водопадом Скок по пути. Остальные регионы поддерживаются по мере готовности интеграций.
+The required demo route runs through the High Tatras, from Štrbské Pleso to Rysy via the Skok waterfall. Support for other regions depends on the readiness of the integrations.
 
-## Команда и структура
+## Team and repository layout
 
-| Каталог | Назначение и стек | Ответственный |
+| Directory | Purpose and stack | Owner |
 |---|---|---|
-| frontend/ | Карта, чат, места и фотографии · React, Vite, Tailwind, MapLibre | Даниил · nnatthebest |
-| api/ | Данные, геопоиск, маршруты и загрузки · Java, Spring Boot | Мурад · uksus148 |
-| agent/ | Чат, поиск Exa, обработка фото и эмбеддинги · Python, FastAPI | Мухамед · dyksookelwe |
-| infra/ | Локальная база и проверка окружения · Docker Compose | Мурад |
+| frontend/ | Map, chat, places, and photos · React, Vite, Tailwind, MapLibre | Daniil · nnatthebest |
+| api/ | Data, geospatial queries, routes, and uploads · Java, Spring Boot | Murad · uksus148 |
+| agent/ | Chat, Exa search, photo processing, and embeddings · Python, FastAPI | Mukhamed · dyksookelwe |
+| infra/ | Local database and environment checks · Docker Compose | Murad |
 
-Планируемые общие сервисы — Aiven PostgreSQL с PostGIS и pgvector, Valkey и Kafka. API использует OpenRouteService для пешеходных маршрутов. Агент выполняет поиск через Exa и сохраняет источники.
+Planned shared services are Aiven PostgreSQL with PostGIS and pgvector, Valkey, and Kafka. The API uses OpenRouteService for hiking routes. The agent searches through Exa and retains source links.
 
-## Начало работы
+## Getting started
 
-1. Клонируйте репозиторий и создайте ветку от актуальной main для своей задачи.
-2. Прочитайте [CLAUDE.md](CLAUDE.md) с архитектурой, контрактом и задачами команды.
-3. Скопируйте `.env.example` в `.env` в корне и заполните переменные для своего сервиса. В шаблоне перечислены общие адреса и пустые поля ключей.
-4. Проверьте [CONTRIBUTING.md](CONTRIBUTING.md) и [правила защиты и ревью](docs/REPOSITORY_RULES.md) перед открытием PR.
+1. Clone the repository and create a task branch from the current main. Use a descriptive prefix such as feat/, fix/, docs/, infra/, or chore/.
+2. Read [CLAUDE.md](CLAUDE.md) for architecture, the API contract, and team tasks.
+3. Copy `.env.example` to a root `.env` and fill in values for your service. The template lists shared addresses and empty secret fields.
+4. Read [CONTRIBUTING.md](CONTRIBUTING.md) and the [repository rules](docs/REPOSITORY_RULES.md) before opening a PR.
 
 ```sh
 git clone https://github.com/uksus148/junction-2026-trails.git
@@ -28,14 +28,16 @@ cd junction-2026-trails
 cp .env.example .env
 ```
 
-Для локальной базы нужны Docker и Docker Compose. Настройка с PostgreSQL 18, PostGIS, pgvector и настраиваемым портом подготовлена в [PR #1](https://github.com/uksus148/junction-2026-trails/pull/1), там находятся инструкция запуска и результат CI. Фронтенд проходит ревью серией [PR #4–10](https://github.com/uksus148/junction-2026-trails/pulls). Команды запуска каждого сервиса добавляются с его реализацией в соответствующий каталог.
+The local database requires Docker and Docker Compose. PostgreSQL 18, PostGIS, pgvector, and a configurable port are prepared in [PR #1](https://github.com/uksus148/junction-2026-trails/pull/1), which includes setup instructions and CI results. The frontend is under review in [PRs #4–10](https://github.com/uksus148/junction-2026-trails/pulls). Each service adds its run commands to its own directory as implementation progresses.
 
-Проверен облачный сервис Aiven Free с PostgreSQL 18.7, PostGIS 3.6.4 и pgvector 0.8.7. Доступы к сервисам команда передаёт через закрытый канал. Локальный `.env` исключён из Git.
+Aiven Free has been verified with PostgreSQL 18.7, PostGIS 3.6.4, and pgvector 0.8.7. Share service credentials through a private channel. Git ignores the local `.env`.
 
-## Общий контракт
+## Shared contract and project language
 
-Раздел «Контракт API» в [CLAUDE.md](CLAUDE.md) задаёт исходную версию. Предложения режима дня и персонализации вынесены в [сверку контракта](docs/CONTRACT_REVIEW.md). Изменения обсуждают разработчики затронутых компонентов и фиксируют итог в CLAUDE.md.
+The API contract section in [CLAUDE.md](CLAUDE.md) defines the baseline. Day-planning and personalization proposals are listed in the [contract review](docs/CONTRACT_REVIEW.md). Affected developers discuss changes and record the agreement in CLAUDE.md.
 
-## Лицензия
+English is the project language for repository files, code comments, documentation, commits, PRs, and reviews.
 
-Код проекта распространяется по [MIT](LICENSE).
+## License
+
+The project code is distributed under [MIT](LICENSE).

@@ -1,34 +1,34 @@
-# Сверка контракта между frontend, api и agent
+# Contract review across frontend, api, and agent
 
-Мурад публикует свою локальную версию [CLAUDE.md](../CLAUDE.md) как исходный командный документ. Этот файл собирает вопросы для совместного решения в PR. Утверждённые изменения переносим в раздел «Контракт API» и журнал решений CLAUDE.md.
+Murad's local [CLAUDE.md](../CLAUDE.md), translated into English, provides the shared baseline. This file gathers decisions for discussion in the PR. Record agreed changes in the API contract section and decision log of CLAUDE.md.
 
-## Исходный сценарий
+## Initial flow
 
-Чат возвращает места и при наличии маршрута `routeId`. API хранит места, строит и сохраняет пешеходный маршрут. Фронтенд показывает GeoJSON, точки и фотографии с источниками. Демонстрационный запрос описан в CLAUDE.md.
+Chat returns places and an optional routeId. The API stores places and builds and saves a hiking route. The frontend displays GeoJSON, markers, and photos with sources. CLAUDE.md describes the required demo request.
 
-| Часть | Контракт из исходного документа | Владелец реализации |
+| Component | Initial contract | Implementation owner |
 |---|---|---|
-| Чат | POST /api/chat → reply, places, routeId? | Мухамед |
-| Места | GET /api/places с bbox и tags, POST /api/places | Мурад |
-| Маршруты | POST /api/routes, GET /api/routes/{id} | Мурад |
-| Фотографии | POST /api/photos → событие photo.uploaded | Мурад и Мухамед |
-| Отображение | Place, Photo и Route из CLAUDE.md | Даниил |
+| Chat | POST /api/chat returns reply, places, routeId? | Mukhamed |
+| Places | GET /api/places with bbox and tags, POST /api/places | Murad |
+| Routes | POST /api/routes, GET /api/routes/{id} | Murad |
+| Photos | POST /api/photos publishes photo.uploaded | Murad and Mukhamed |
+| Display | Place, Photo, and Route from CLAUDE.md | Daniil |
 
-Со стороны backend базой остаются эти маршруты и структуры. Bbox передаётся в порядке minLon,minLat,maxLon,maxLat. Поля lat и lon выражены в градусах WGS84, координаты GeoJSON идут в порядке долгота, широта. Единицы расстояния, набора высоты и времени задают поля distanceKm, ascentM и durationMin.
+The backend starts from these endpoints and structures. Bbox order is minLon,minLat,maxLon,maxLat. Fields lat and lon use WGS84 degrees. GeoJSON coordinate order is longitude, latitude. Fields distanceKm, ascentM, and durationMin define distance, ascent, and time units.
 
-## Предложение для первого сквозного MVP
+## Proposal for the first end-to-end MVP
 
-Сначала соединяем исходный сценарий чата, мест и маршрута с живыми сервисами. Предложения режима дня, персонализации и новых /api/itineraries из PR #3 и #5 обсуждаем отдельным расширением контракта. Добавление в TypeScript требует согласованного плана реализации со стороны API и агента.
+Connect the original chat, places, and route flow to live services first. Discuss day planning, personalization, and the new /api/itineraries endpoints from PR #3 and #5 as a contract extension. New TypeScript types need an agreed API and agent implementation plan.
 
-| Вопрос | Кому ответить | Что требуется зафиксировать |
+| Decision | Participants | Required outcome |
 |---|---|---|
-| Границы первого демо | Всем троим | Какие функции режима дня входят в ближайшее демо и кто их реализует |
-| Изменения чата | Мухамеду и Даниилу | Нужные mode, preferences, preferencesPatch и совместимость с исходным ответом |
-| Планировщик дня | Мураду и Даниилу | Где выполняется алгоритм и какие новые эндпоинты нужны после маршрута MVP |
-| Транспортные участки | Всем троим | Как вычисляется и объясняется время транспорта, если функция входит в демо |
+| First demo scope | All three developers | Day-planning features included in the next demo and their implementation owners |
+| Chat changes | Mukhamed and Daniil | Required mode, preferences, and preferencesPatch fields and compatibility with the initial response |
+| Day planner | Murad and Daniil | Execution location of the algorithm and new endpoints needed after the route MVP |
+| Transit legs | All three developers | Calculation and explanation of transit times if included in the demo |
 
-До реализации соответствующих HTTP-обработчиков backend уточнит в отдельном PR тип идентификаторов, коды успешных ответов и ошибок и ответ на загрузку фото. Эти детали потребуют сверки с клиентом и агентом.
+Before implementing the relevant HTTP handlers, the backend will propose identifier types, success and error status codes, and the photo upload response in a dedicated PR. Review those details with the frontend and agent.
 
-## Как принять договорённость
+## Recording agreement
 
-Даниил и Мухамед оставляют ответы в PR с этим документом либо предлагают правку CLAUDE.md. В ответе указывают затронутые поля, владельца реализации и пример запроса или ответа. После сверки переносим решение в CLAUDE.md, обновляем типы и моки и проверяем сквозной запрос. Расхождения в документах из PR #3 согласуем относительно опубликованного файла Мурада.
+Daniil and Mukhamed respond in the PR containing this document or propose a CLAUDE.md edit. Include affected fields, an implementation owner, and an example request or response. Move the agreement into CLAUDE.md, update types and mocks, and verify an end-to-end request. Reconcile differences in PR #3 against Murad's published baseline.

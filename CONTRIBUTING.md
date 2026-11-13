@@ -1,14 +1,16 @@
-# Как мы вносим изменения
+# Contributing
 
-Для каждой задачи создаём ветку от актуальной `main` и открываем один pull request (PR) с результатом, который можно проверить отдельно. Комментарии в исходном коде пишем на английском. Описание PR и обсуждение ревью можно вести по-русски.
+Create a task branch from the current `main` and open a pull request that can be reviewed independently. English is the project language for repository files, code comments, documentation, commit messages, PR titles, descriptions, and reviews.
 
-Перед работой читаем [CLAUDE.md](CLAUDE.md). Общие [правила защиты и ревью](docs/REPOSITORY_RULES.md) действуют для всех троих. GitHub подставляет [шаблон PR](.github/pull_request_template.md) автоматически.
+Read [CLAUDE.md](CLAUDE.md) before making changes. The [repository rules](docs/REPOSITORY_RULES.md) apply to all three developers. GitHub automatically inserts the [PR template](.github/pull_request_template.md).
 
-## Коммиты
+## Branches and commits
 
-Используем формат Conventional Commits `type(scope): short description`. После двоеточия пишем по-английски, начинаем с глагола в повелительном наклонении. Область выбираем по затронутой части проекта — `frontend`, `api`, `agent`, `infra` или `repo` для общих файлов.
+Use descriptive branch names such as `feat/places-bbox`, `fix/route-distance`, `docs/api-contract`, `infra/local-database`, or `chore/dependencies`.
 
-Тип `feat` означает новую возможность, `fix` — исправление ошибки, `test` — изменение тестов, `docs` — документацию, `refactor` — переработку кода с сохранением поведения, `ci` — автоматические проверки, `chore` — обслуживание проекта.
+Use Conventional Commits in the format `type(scope): short description`. Start the English description with an imperative verb. Choose a scope from `frontend`, `api`, `agent`, `infra`, or `repo` for shared files.
+
+Use `feat` for new behavior, `fix` for bug fixes, `test` for tests, `docs` for documentation, `refactor` for behavior-preserving restructuring, `ci` for automated checks, and `chore` for maintenance.
 
 ```text
 feat(api): filter places by bounding box
@@ -18,29 +20,29 @@ test(agent): cover chat requests with no matching places
 
 ## Pull requests
 
-Заголовок PR пишем в том же формате, что и коммит. В описании заполняем три коротких раздела. Если проверку ещё не запускали, указываем, что осталось проверить.
+Use the same format for the PR title and the resulting squash commit. Complete the following sections. State which checks remain outstanding.
 
 ```markdown
-### Что изменилось
-Какое поведение изменилось и для кого?
+### What changed
+Describe the changed behavior and who uses it.
 
-### С чего начать ревью
-Какой файл открыть первым? Что затронуто в API, схеме БД или событиях Kafka?
+### Where to start reviewing
+Name the first file to open and changes to the API, database schema, or Kafka events.
 
-### Как проверить
-Команда или шаги, входные данные и фактический результат.
+### How to test
+Provide commands or steps, inputs, and actual results.
 ```
 
-Если меняется общий контракт API, до реализации согласуем изменение с участниками, чьи компоненты его используют, и фиксируем договорённость в корневом `CLAUDE.md`. В PR приводим пример запроса или ответа с изменением. Текущие вопросы между фронтендом, API и агентом собраны в [обсуждении контракта](docs/CONTRACT_REVIEW.md).
+Agree shared API changes with the affected developers before implementation, and record the decision in the root `CLAUDE.md`. Include an example request or response in the PR. Current cross-service questions are listed in the [contract review](docs/CONTRACT_REVIEW.md).
 
-## Ревью и слияние
+## Review and merge
 
-1. Автор запрашивает ревью одного коллеги с правом записи. Если меняется взаимодействие между компонентами, выбираем того, кто работает со второй стороной. Авторская самопроверка помогает подготовить PR, одобрение даёт коллега.
-2. Ревьюер проходит сценарий из описания PR и оставляет замечания у конкретных строк. Блокирующее замечание помечает `[blocker]` и указывает входные данные, последствие и ожидаемое поведение. Необязательное улучшение помечает `[nit]`.
-3. При блокирующем замечании выбираем **Request changes**. Автор исправляет проблему, отвечает в обсуждении, как её проверил, и повторно запрашивает ревью. Если изменение готово, выбираем **Approve**. Замечания с `[nit]` можно оставить вместе с одобрением.
-4. После одного **Approve**, закрытия обсуждений и успешных применимых проверок PR автор выбирает **Squash and merge**. Заголовок итогового коммита берём из заголовка PR. Новые изменения кода сбрасывают одобрение, после них повторно запрашиваем ревью.
+1. Request review from another developer with write access. For cross-service changes, choose a reviewer who owns the consuming component. Author self-checks prepare the PR for independent review.
+2. The reviewer follows the scenario in the PR description and comments on specific lines. Mark blocking findings with `[blocker]`, including the input, consequence, and expected behavior. Mark optional improvements with `[nit]`.
+3. Use **Request changes** for blocking findings. The author fixes them, explains verification, and requests another review. Use **Approve** when the change is ready. Optional suggestions may accompany approval.
+4. After one **Approve**, resolved review threads, and successful applicable checks, the author selects **Squash and merge**. Use the PR title as the squash commit title. New reviewable changes dismiss the approval and require another review.
 
-Примеры замечаний к PR с фильтрацией мест по карте
+Example findings for a map-based place filter follow.
 
-- `[blocker]` При запросе `bbox=20,49,21,50` точка с долготой 20.5 и широтой 49.5 выпадает из ответа. Проверь порядок координат при построении прямоугольника и добавь этот случай в тест.
-- `[nit]` Имя `minLon` помогло бы сверить аргумент с порядком координат в контракте.
+- `[blocker]` For `bbox=20,49,21,50`, a point at longitude 20.5 and latitude 49.5 is missing from the response. Check coordinate order when building the envelope and add a regression case.
+- `[nit]` Naming this parameter `minLon` would help match it to the coordinate order in the contract.

@@ -1,17 +1,17 @@
-### Что изменилось
+### What changed
 
-Опишите задачу и получившееся поведение.
+Describe the task and resulting behavior.
 
-### С чего начать ревью
+### Where to start reviewing
 
-Укажите первый файл и решения, которые требуют внимания.
+Name the first file to open and decisions that need attention.
 
-Если меняются API, схема БД или события Kafka, добавьте пример и ссылку на согласование с владельцами затронутых компонентов. Обновите соответствующий раздел корневого CLAUDE.md.
+For API, database schema, or Kafka event changes, include an example and a link to agreement with the affected component owners. Update the relevant section of the root CLAUDE.md.
 
-### Как проверить
+### How to test
 
-Приведите команды или шаги, входные данные и фактический результат. Укажите оставшиеся проверки.
+Provide commands or steps, inputs, and actual results. State any outstanding checks.
 
-### Ревью
+### Review
 
-Запросите в GitHub ревью коллеги с правом записи. Для изменения взаимодействия сервисов выберите разработчика второй стороны.
+Request review from another developer with write access. For cross-service changes, choose a reviewer who owns the consuming component.

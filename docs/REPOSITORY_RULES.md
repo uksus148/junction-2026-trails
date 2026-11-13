@@ -1,42 +1,42 @@
-# Общие правила репозитория
+# Repository rules
 
-Правила действуют для Мурада (`uksus148`), Даниила (`nnatthebest`) и Мухамеда (`dyksookelwe`). У коллег есть право `write`. У Мурада права владельца, при внесении кода он проходит тот же процесс ревью.
+These rules apply to Murad (`uksus148`), Daniil (`nnatthebest`), and Mukhamed (`dyksookelwe`). Both collaborators have write access. Murad owns the repository and follows the same code review process.
 
-## Защита main
+## Main branch protection
 
-Активный ruleset `main-team-review` применяется к основной ветке репозитория, сейчас это `main`.
+The active `main-team-review` ruleset targets the repository's default branch, currently `main`.
 
-| Условие | Поведение GitHub |
+| Requirement | GitHub behavior |
 |---|---|
-| Изменения через PR | Коммиты отправляем в рабочую ветку и предлагаем через PR |
-| Одно одобрение | Требуется Approve от другого участника с правом записи |
-| Сброс устаревшего одобрения | После новых изменений требуется повторное ревью |
-| Закрытые обсуждения | Перед слиянием разрешаем все review threads |
-| Squash | Все изменения одного PR входят в main одним коммитом |
-| Линейная история | История main сохраняется без merge-коммитов |
-| Защита от удаления | Удаление основной ветки блокируется |
-| Защита от force push | Перезапись истории основной ветки блокируется |
-| Общие условия | Список обхода пуст, правила применяются и к владельцу |
+| Changes through PRs | Push changes to a task branch and submit a PR |
+| One approval | Require Approve from another developer with write access |
+| Dismiss stale approvals | Reviewable changes require another review |
+| Resolve review discussions | Resolve all review threads before merging |
+| Squash merge | Merge each PR into main as one commit |
+| Linear history | Keep main free of merge commits |
+| Deletion protection | Block deletion of the default branch |
+| Force-push protection | Block rewriting default-branch history |
+| Equal conditions | The bypass list is empty, including for the repository owner |
 
-Рабочие ветки сохраняют возможность обновления и rebase. Для серии связанных PR указываем базовую ветку и порядок слияния. После squash предыдущего PR проверяем базу и состав следующего diff.
+Use task prefixes such as `feat/`, `fix/`, `docs/`, `infra/`, and `chore/` for new branches. Task branches support normal updates and rebase. For stacked PRs, state the base branch and merge order. After squashing an earlier PR, check the base and diff of the next PR.
 
-## Автоматические проверки
+## Automated checks
 
-Инфраструктурный workflow из PR #1 запускается для изменений `infra/**`. Автор и ревьюер проверяют успешное завершение применимых запусков CI. В ruleset обязательные статусы пока отсутствуют, поскольку текущая проверка запускается условно. Добавляя обязательный статус, обеспечиваем его завершение для каждого PR в main.
+The infrastructure workflow from PR #1 runs for changes under `infra/**`. The author and reviewer check applicable CI results before merging. Required status checks are currently empty in the ruleset because the existing workflow runs conditionally. Add a required status only when it produces a final result for every PR into main.
 
-## Как распределяем ревью
+## Assigning reviews
 
-- Изменение API и агента направляем разработчику компонента, который использует контракт.
-- Общую БД и расширения ревьюит коллега, который использует геоданные или эмбеддинги.
-- Общие правила и исходный контракт направляем обоим коллегам для сверки.
-- Автор в описании сообщает фактически выполненные проверки, ревьюер проверяет сценарий и оставляет Approve или Request changes. Замечания помечаем `[blocker]` и `[nit]` по CONTRIBUTING.md.
+- Send API and agent changes to the developer whose component consumes the contract.
+- Ask a colleague who uses geospatial data or embeddings to review shared database changes.
+- Request both colleagues' input on shared rules and the initial API contract.
+- Authors report actual checks in the description. Reviewers run the scenario and submit Approve or Request changes. Use `[blocker]` and `[nit]` as described in CONTRIBUTING.md.
 
-Технически GitHub требует одно одобрение. Для общего контракта собираем ответы обоих владельцев затронутых компонентов в обсуждении PR и переносим итог в CLAUDE.md.
+GitHub requires one approval. For shared contract decisions, collect the affected owners' responses in the PR discussion and record the agreement in CLAUDE.md.
 
-## Где хранится контекст
+## Project context and language
 
-Корневой CLAUDE.md хранит архитектуру, общий контракт и решения команды. Мурад опубликовал свою локальную версию как исходную для сверки. Каждый участник сравнивает её со своими заметками и предлагает уточнения через PR к этому файлу. Памятки и инструкции сервисов ссылаются на него.
+The root CLAUDE.md holds architecture, the shared API contract, and team decisions. Murad's local file provides the initial baseline, translated into English. Each developer compares it with their notes and proposes updates through PRs. Service instructions and short team briefs link to this canonical file.
 
-README описывает проект и запуск. CONTRIBUTING.md задаёт формат коммитов, PR и ревью. Этот документ описывает общие условия защиты ветки. Комментарии в коде пишем по-английски, обсуждения и документация допускают русский.
+README describes the project and setup. CONTRIBUTING.md defines commit, PR, and review conventions. This document describes branch protection. Write all repository files and GitHub collaboration content in English.
 
-[Настроенный ruleset](https://github.com/uksus148/junction-2026-trails/rules/27240390).
+[Active ruleset](https://github.com/uksus148/junction-2026-trails/rules/27240390).
