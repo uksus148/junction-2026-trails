@@ -1,0 +1,36 @@
+name: Database smoke test
+
+on:
+  pull_request:
+    paths:
+      - 'infra/**'
+
+permissions:
+  contents: read
+
+jobs:
+  database:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      COMPOSE_FILE: infra/compose.yaml
+      POSTGRES_DB: trails_ci
+      POSTGRES_USER: trails_ci
+      POSTGRES_PASSWORD: local-ci-only
+      POSTGRES_PORT: '55432'
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Start a fresh database
+        run: docker compose up --build --wait --wait-timeout 120 db
+      - name: Verify PostGIS and pgvector
+        run: |
+          docker compose exec -T db psql -X -v ON_ERROR_STOP=1 \
+            -U "$POSTGRES_USER" -d "$POSTGRES_DB" < infra/smoke.sql
+      - name: Show database logs on failure
+        if: failure()
+        run: docker compose logs db
+      - name: Remove the test database
+        if: always()
+        run: docker compose down --volumes
