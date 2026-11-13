@@ -167,9 +167,10 @@ npm test                                    # vitest
   One scheduler for planning and replanning; dropped places are shown with a reason (transparency for the Exa judges).
 - 14.11 — A leg longer than 2.5 km is public transport (18 km/h + 8 min wait) and does not count towards the walking limit.
 - 14.11 — Everything on GitHub in English; work goes in as a stack of small PRs (see Working agreements).
+- 14.11 — Aiven PostgreSQL Free plan confirmed: PostgreSQL 18.7 with PostGIS 3.6.4 and pgvector 0.8.7 (checked by Murat in #1).
+  Local dev uses the same major version via `infra/compose.yaml`; app tables come from Flyway migrations in `api/`.
 
 ## Open questions
-- [ ] Are pgvector and PostGIS available on the Aiven PostgreSQL free plan? If not, Hobbyist plan from credits.
 - [ ] Aiven Runtime cost in credits → decide where the api and agent are hosted.
 - [ ] Photo licences: only shown with author and link. TikTok is not scraped — the user pastes a link or description and we search with Exa.
 - [ ] "Replan from now" uses the device time zone, not the destination's.
