@@ -5,6 +5,9 @@ const EARTH_RADIUS_KM = 6371
 /** Real paths are longer than straight lines; used to estimate walking distance. */
 export const TRAIL_WINDING_FACTOR = 1.35
 
+/** Round to 0.1 — the precision we show for kilometres everywhere. */
+export const round1 = (n: number) => Math.round(n * 10) / 10
+
 const toRad = (deg: number) => (deg * Math.PI) / 180
 
 export function haversineKm(a: LatLon, b: LatLon): number {

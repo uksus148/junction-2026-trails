@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import type { PickMode, Trip } from '../hooks/useTrip'
+import { isValidTime, toMinutes } from '../lib/time'
 import type { LatLon } from '../types'
 
 const PLACE_TAGS = ['viewpoint', 'waterfall', 'castle', 'peak', 'lake', 'other'] as const
@@ -18,7 +19,8 @@ export function ManualPanel({ trip }: ManualPanelProps) {
   const isDay = trip.mode === 'day'
   const [startTime, setStartTime] = useState(DEFAULT_START_TIME)
   const [endTime, setEndTime] = useState(DEFAULT_END_TIME)
-  const canBuild = isDay ? start !== null && places.length > 0 && startTime < endTime : start !== null && end !== null
+  const validWindow = isValidTime(startTime) && isValidTime(endTime) && toMinutes(startTime) < toMinutes(endTime)
+  const canBuild = isDay ? start !== null && places.length > 0 && validWindow : start !== null && end !== null
   const build = () => void (isDay ? trip.buildDayPlan(startTime, endTime) : trip.buildRoute())
   const buildLabel = isDay ? 'Plan my day' : 'Build route'
 

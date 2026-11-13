@@ -1,6 +1,11 @@
 const MINUTES_PER_DAY = 24 * 60
 const TIME_PATTERN = /^(\d{1,2}):(\d{2})$/
 
+export function isValidTime(hhmm: string): boolean {
+  const match = TIME_PATTERN.exec(hhmm)
+  return match !== null && Number(match[1]) < 24 && Number(match[2]) < 60
+}
+
 /** '09:30' → 570 */
 export function toMinutes(hhmm: string): number {
   const match = TIME_PATTERN.exec(hhmm)

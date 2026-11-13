@@ -1,6 +1,6 @@
 // Reference day planner. Backend ports this 1:1 (see CLAUDE.md), so keep it pure and dependency-free.
 import type { DayPlan, DropReason, DroppedPlace, ItineraryStop, LatLon, Place, Preferences, ReplanRequest, TravelMode } from '../types'
-import { haversineKm, TRAIL_WINDING_FACTOR } from './geo'
+import { haversineKm, round1, TRAIL_WINDING_FACTOR } from './geo'
 import { filterAndScore, PACE_PROFILES, type ScoredPlace } from './preferences'
 import { fromMinutes, toMinutes } from './time'
 
@@ -19,8 +19,6 @@ type ScheduleState = { position: LatLon; timeMin: number; walkedKm: number; rema
 type ScheduleInput = { from: LatLon; startMin: number; endMin: number; pool: Place[]; prefs: Preferences; walkedKm: number }
 
 type ScheduleResult = { stops: ItineraryStop[]; dropped: DroppedPlace[]; walkKm: number }
-
-const round1 = (n: number) => Math.round(n * 10) / 10
 
 export function legBetween(from: LatLon, to: LatLon, prefs: Preferences): Leg {
   const km = haversineKm(from, to) * TRAIL_WINDING_FACTOR
@@ -152,9 +150,11 @@ export function replanDay(plan: DayPlan, request: ReplanRequest): DayPlan {
   ])
   const done = plan.stops.filter((s) => doneIds.has(s.place.id)).map((s) => ({ ...s, status: 'done' as const }))
   const preferences = request.preferences ?? plan.preferences
+  // Replanning before the day has started (e.g. at night) must not schedule visits before startTime.
+  const resumeMin = Math.max(toMinutes(request.now), toMinutes(plan.startTime))
   const result = schedule({
     from: request.location ?? done.at(-1)?.place ?? plan.start,
-    startMin: toMinutes(request.now),
+    startMin: resumeMin,
     endMin: toMinutes(plan.endTime),
     pool: plan.candidates.filter((p) => !doneIds.has(p.id) && !skippedIds.has(p.id)),
     prefs: preferences,
@@ -169,6 +169,6 @@ export function replanDay(plan: DayPlan, request: ReplanRequest): DayPlan {
     stops: [...done, ...result.stops],
     dropped: [...skipped, ...result.dropped],
     walkKm: result.walkKm,
-    resumeAt: request.now,
+    resumeAt: fromMinutes(resumeMin),
   }
 }

@@ -1,4 +1,4 @@
-import { haversineKm, TRAIL_WINDING_FACTOR } from '../lib/geo'
+import { haversineKm, round1, TRAIL_WINDING_FACTOR } from '../lib/geo'
 import type { Itinerary, LatLon, Photo, Place, Route, RouteSegment } from '../types'
 import { findPhotosNear } from './wikimedia'
 
@@ -15,7 +15,6 @@ let itineraryRegistry: ReadonlyMap<string, Itinerary> = new Map()
 let photoCache: ReadonlyMap<string, Photo[]> = new Map()
 
 export const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
-const round1 = (n: number) => Math.round(n * 10) / 10
 const pointKey = (p: LatLon) => `${p.lat.toFixed(4)},${p.lon.toFixed(4)}`
 
 export async function photosNearSafe(point: LatLon): Promise<Photo[]> {

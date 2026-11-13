@@ -119,6 +119,13 @@ describe('replanDay', () => {
     expect(result.stops[0]).toEqual({ ...first, status: 'done' })
   })
 
+  it('never replans into the time before the day starts', () => {
+    const result = replanDay(day(), { now: '01:00', skipPlaceIds: [], donePlaceIds: [] })
+
+    expect(result.stops[0].arriveAt >= '10:00').toBe(true)
+    expect(result.resumeAt).toBe('10:00')
+  })
+
   it('remembers earlier skips on the next replan', () => {
     const initial = day()
     const skippedId = initial.stops[0].place.id

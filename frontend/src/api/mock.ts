@@ -6,10 +6,14 @@ import { buildRoute, delay, getItinerary, getPlace, getRoute, MOCK_LATENCY_MS, p
 
 // In-browser stand-in for api + agent so the frontend works before the backends exist.
 
+// The demo only has a day plan for Bratislava; a Tatras hike request keeps getting the hiking route even in day mode.
+const TATRAS_REQUEST = /štrbsk|strbsk|rysy|tatr|skok|штрбске|рысы|татр/iu
+
 export const mockApi: ApiClient = {
   async chat(request) {
     await delay(MOCK_LATENCY_MS)
-    if (request.mode === 'day' || detectDayPlan(request.message)) return dayChat(request)
+    const wantsDay = detectDayPlan(request.message) || (request.mode === 'day' && !TATRAS_REQUEST.test(request.message))
+    if (wantsDay) return dayChat(request)
 
     const patch = extractPreferencesPatch(request.message)
     const places = (await Promise.all(DEMO_PLACES.map(withPhotos))).map(registerPlace)
