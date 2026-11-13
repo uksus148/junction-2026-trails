@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import type { PickMode, Trip } from '../hooks/useTrip'
+import { isValidTime, toMinutes } from '../lib/time'
 import type { LatLon } from '../types'
 
 const PLACE_TAGS = ['viewpoint', 'waterfall', 'castle', 'peak', 'lake', 'other'] as const
@@ -10,16 +11,32 @@ interface ManualPanelProps {
   trip: Trip
 }
 
+const DEFAULT_START_TIME = '10:00'
+const DEFAULT_END_TIME = '18:00'
+
 export function ManualPanel({ trip }: ManualPanelProps) {
   const { start, end, places, pickMode, pendingPoint, busy } = trip
-  const canBuild = start !== null && end !== null
+  const isDay = trip.mode === 'day'
+  const [startTime, setStartTime] = useState(DEFAULT_START_TIME)
+  const [endTime, setEndTime] = useState(DEFAULT_END_TIME)
+  const validWindow = isValidTime(startTime) && isValidTime(endTime) && toMinutes(startTime) < toMinutes(endTime)
+  const canBuild = isDay ? start !== null && places.length > 0 && validWindow : start !== null && end !== null
+  const build = () => void (isDay ? trip.buildDayPlan(startTime, endTime) : trip.buildRoute())
+  const buildLabel = isDay ? 'Plan my day' : 'Build route'
 
   return (
     <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-5 py-4">
       {pickMode && <p className="rounded-xl bg-moss/10 px-3 py-2 text-sm text-moss">Click on the map to place the point.</p>}
       <div className="grid grid-cols-2 gap-2">
         <PickButton label="Start (A)" point={start} mode="start" trip={trip} />
-        <PickButton label="Finish (B)" point={end} mode="end" trip={trip} />
+        {isDay ? (
+          <div className="grid grid-cols-2 gap-1 rounded-xl bg-white px-2 py-1.5 ring-1 ring-line">
+            <TimeField label="From" value={startTime} onChange={setStartTime} />
+            <TimeField label="Until" value={endTime} onChange={setEndTime} />
+          </div>
+        ) : (
+          <PickButton label="Finish (B)" point={end} mode="end" trip={trip} />
+        )}
       </div>
 
       <div>
@@ -45,14 +62,20 @@ export function ManualPanel({ trip }: ManualPanelProps) {
         </ol>
       </div>
 
-      <button
-        onClick={() => void trip.buildRoute()}
-        disabled={!canBuild || busy}
-        className="w-full rounded-xl bg-trail py-3 font-medium text-white transition hover:brightness-110 disabled:opacity-40"
-      >
-        {busy ? 'Building route…' : 'Build route'}
+      <button onClick={build} disabled={!canBuild || busy} className="w-full rounded-xl bg-trail py-3 font-medium text-white transition hover:brightness-110 disabled:opacity-40">
+        {busy ? 'Working…' : buildLabel}
       </button>
+      {isDay && <p className="text-xs text-stone">Uses your pace, walking limit, budget and crowd settings from the Me tab.</p>}
     </div>
+  )
+}
+
+function TimeField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+  return (
+    <label className="text-xs text-stone">
+      {label}
+      <input type="time" value={value} onChange={(e) => onChange(e.target.value)} className="block w-full bg-transparent text-sm text-ink outline-none" />
+    </label>
   )
 }
 

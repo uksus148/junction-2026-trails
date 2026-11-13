@@ -70,8 +70,8 @@ function EmptyState({ suggestions, onPick, disabled }: EmptyStateProps) {
   return (
     <div className="space-y-3 pt-2">
       <p className="text-[15px] text-stone">
-        Describe the trip in your own words: where you start, what you want to see, and what you'd rather skip. Paste a TikTok or
-        blog link if you saw a place there.
+        Describe the trip in your own words: where you start, what you want to see, and what you'd rather skip. Ask for a day plan and you
+        get a timed schedule that rebuilds itself when plans change.
       </p>
       <div className="space-y-2">
         {suggestions.map((s) => (

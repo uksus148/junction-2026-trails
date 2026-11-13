@@ -23,15 +23,17 @@ interface MapViewProps {
   places: Place[]
   pendingPoint: LatLon | null
   pickMode: PickMode
+  doneIds: string[]
   onMapClick: (point: LatLon) => void
 }
 
-type MarkerSpec = { point: LatLon; label: string; title: string; variant: 'start' | 'end' | 'place' | 'pending' }
+type MarkerSpec = { point: LatLon; label: string; title: string; variant: 'start' | 'end' | 'place' | 'done' | 'pending' }
 
 const MARKER_CLASSES: Record<MarkerSpec['variant'], string> = {
   start: 'bg-moss text-white',
   end: 'bg-ink text-white',
   place: 'bg-trail text-white',
+  done: 'bg-stone text-white opacity-70',
   pending: 'bg-white text-trail border-2 border-dashed border-trail',
 }
 
@@ -49,7 +51,12 @@ function markerSpecs(props: MapViewProps): MarkerSpec[] {
   const startPoint = props.start ?? (first ? { lat: first[1], lon: first[0] } : null)
   return [
     ...(startPoint ? [{ point: startPoint, label: 'A', title: 'Start', variant: 'start' as const }] : []),
-    ...routePlaces.map((p, i) => ({ point: p, label: String(i + 1), title: p.name, variant: 'place' as const })),
+    ...routePlaces.map((p, i) => ({
+      point: p,
+      label: String(i + 1),
+      title: p.name,
+      variant: props.doneIds.includes(p.id) ? ('done' as const) : ('place' as const),
+    })),
     ...(props.end ? [{ point: props.end, label: 'B', title: 'Finish', variant: 'end' as const }] : []),
     ...(props.pendingPoint ? [{ point: props.pendingPoint, label: '+', title: 'New place', variant: 'pending' as const }] : []),
   ]
