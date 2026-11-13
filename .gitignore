@@ -1,0 +1,31 @@
+# Local environment and credentials
+.env
+.env.*
+!.env.example
+*.key
+*.p12
+*.jks
+
+# Java / Spring Boot
+target/
+build/
+.gradle/
+*.class
+
+# React / Vite
+node_modules/
+dist/
+
+# Python / FastAPI
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+
+# Editors and local files
+.idea/
+.vscode/
+*.iml
+.DS_Store
+*.log
