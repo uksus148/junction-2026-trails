@@ -13,7 +13,7 @@ from gopstop_agent.availability_models import (
     Assessment, AvailabilityEvidence, AvailabilityRequest, AvailabilityResult, ResearchPolicy,
 )
 from gopstop_agent.config import Settings
-from gopstop_agent.exa import ExaSearch, ResearchSource
+from gopstop_agent.exa import MAX_SOURCE_TEXT, ExaSearch, ResearchSource
 from gopstop_agent.llm import ProviderError, ToolModel, create_tool_model
 from gopstop_agent.planning_dates import PlanningWindow, extract_planning_dates
 
@@ -84,9 +84,11 @@ class AvailabilityResearch:
                              {"name": p.name, "lat": p.lat, "lon": p.lon} for p in request.places
                          ], ensure_ascii=False))
                 sources = await self._search.search(query, use_cache=False,
-                                                     include_domains=self._policy.trustedHosts)
+                                                     include_domains=self._policy.trustedHosts, full_text=True)
                 retrieved = now or datetime.now(timezone.utc)
-                sources = [s for s in sources[:3] if self._trusted(s) and s.text.strip()]
+                sources = [s for s in sources[:3] if self._trusted(s)]
+                if any(not s.textComplete for s in sources) or sum(len(s.text) for s in sources) > MAX_SOURCE_TEXT:
+                    return AvailabilityResult(**result, status="unconfirmed", uncertainty="incomplete_evidence")
                 if not sources:
                     return AvailabilityResult(**result, status="unconfirmed", uncertainty="no_official_evidence")
                 value = await self._model.call(self._body(request, planning, sources, retrieved))

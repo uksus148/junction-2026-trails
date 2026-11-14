@@ -7,9 +7,10 @@ import httpx
 import pytest
 
 from gopstop_agent.api_models import ApiPlace
-from gopstop_agent.availability import create_availability_research
+from gopstop_agent.availability import AvailabilityResearch, create_availability_research
 from gopstop_agent.availability_models import AvailabilityRequest, ResearchPolicy
 from gopstop_agent.config import Settings
+from gopstop_agent.exa import ResearchSource
 from test_groq import completion
 from test_trails_api import place
 
@@ -34,7 +35,7 @@ def request(**changes):
 
 
 async def run(value=None, *, sources=None, changes=None, policy=POLICY, provider="groq", fail=None,
-              remaining=20, budget=20):
+              remaining=20, budget=20, honor_text_cap=False, statuses=None):
     calls = []
     cache = AsyncMock()
     cache.get.side_effect = AssertionError("Optional research must not read the 24h place cache")
@@ -54,9 +55,15 @@ async def run(value=None, *, sources=None, changes=None, policy=POLICY, provider
         if req.url.host == "api.exa.ai":
             assert body["includeDomains"] == ["authority.example"] and body["numResults"] == 3
             assert "2026-11-20" in body["query"] or (changes and changes.get("planningText"))
-            return httpx.Response(200, json={"results": [SOURCE] if sources is None else sources})
+            rows = [SOURCE] if sources is None else sources
+            options = body["contents"]["text"]
+            if honor_text_cap and isinstance(options, dict):
+                rows = [{**s, "text": s.get("text", "")[:options["maxCharacters"]]} for s in rows]
+            return httpx.Response(200, json={"results": rows, **({"statuses": statuses} if statuses is not None else {})})
         assert req.url.host in ("api.groq.com", "api.anthropic.com")  # No routing API capability.
         result = {"findings": [NOTICE]} if value is None else value
+        if callable(result):
+            result = result(body)
         if provider == "groq":
             assert body["model"] == "openai/gpt-oss-20b"
             schema = json.dumps(body["tools"][0]["function"]["parameters"])
@@ -210,3 +217,46 @@ async def test_literal_source_publication_or_update_role_is_accepted_even_on_the
     draft = {**NOTICE, "publishedQuote": fact, "publishedOn": "2026-11-01"}
     result, _ = await run({"findings": [draft]}, sources=[source])
     assert result.status == "evidence_found" and result.findings[0].publishedQuote == fact
+
+
+async def test_uncapped_text_retains_a_revocation_beyond_the_old_2000_character_prefix():
+    lifted = QUOTE.replace("restricted", "restriction lifted")
+    full = SOURCE["text"].ljust(2000) + " " + lifted
+
+    def assess(body):
+        evidence = json.loads(body["messages"][1]["content"])["sources"][0]["text"]
+        return {"findings": [NOTICE, *([{**NOTICE, "effect": "restriction_lifted", "quote": lifted}]
+                                     if lifted in evidence else [])]}
+
+    result, calls = await run(assess, sources=[{**SOURCE, "text": full}], honor_text_cap=True)
+    assert json.loads(calls[0].content)["contents"] == {"text": True}
+    assert result.uncertainty == "conflicting_notices" and not result.findings and len(calls) == 2
+
+
+@pytest.mark.parametrize("length", [1999, 2000])
+async def test_unknown_or_capped_text_cannot_be_promoted_even_with_valid_notice_fields(length):
+    search, model = AsyncMock(), AsyncMock()
+    search.search.return_value = [ResearchSource(title=SOURCE["title"], sourceUrl=SOURCE["url"],
+                                               text=SOURCE["text"].ljust(length))]
+    model.call.return_value = {"findings": [NOTICE]}
+    research = AvailabilityResearch(search, model, "fixture", POLICY)
+    result = await research.investigate(request(), remaining_seconds=20, now=NOW)
+    assert result.uncertainty == "incomplete_evidence" and not result.findings
+    assert search.search.await_count == 1 and model.call.await_count == 0
+
+
+@pytest.mark.parametrize("size,count", [(10001, 1), (6000, 2)])
+async def test_oversized_qualifying_sources_are_not_sliced_or_dropped_before_assessment(size, count):
+    rows = [SOURCE, *[{**SOURCE, "url": f"https://authority.example/qualifier/{i}",
+                       "text": SOURCE["text"].ljust(size)} for i in range(count)]]
+    result, calls = await run(sources=rows)
+    assert result.uncertainty == "incomplete_evidence" and len(calls) == 1
+
+
+@pytest.mark.parametrize("statuses", [[{"id": SOURCE["url"], "status": "error"}],
+                                     [{"id": "https://authority.example/other", "status": "success"}],
+                                     [{"id": SOURCE["url"], "status": "success"},
+                                      {"id": SOURCE["url"], "status": "error"}]])
+async def test_failed_missing_or_conflicting_content_status_never_becomes_complete(statuses):
+    result, calls = await run(statuses=statuses)
+    assert result.uncertainty == "incomplete_evidence" and len(calls) == 1

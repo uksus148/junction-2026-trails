@@ -75,6 +75,19 @@ async def test_fresh_search_does_not_replay_a_redirect_even_with_a_redirecting_c
     assert len(calls) == 1 and not await cache.keys("gopstop:exa-text:v1:*")
 
 
+async def test_ordinary_cached_excerpts_never_gain_completeness_or_change_their_serialized_shape(cache):
+    async with httpx.AsyncClient(transport=httpx.MockTransport(lambda _: httpx.Response(200, json={
+        "results": [{"url": "https://example.org/notice", "text": "short", "textComplete": True}],
+    }))) as client:
+        search = ExaSearch(client, cache, "fixture")
+        for _ in range(2):
+            source, = await search.search("notice")
+            assert source.textComplete is False
+            assert set(source.model_dump()) == {"title", "sourceUrl", "text"}
+        with pytest.raises(ValueError):
+            await search.search("notice", full_text=True)
+
+
 async def test_queries_have_separate_caches_and_empty_results_are_cached(cache):
     calls = []
 
