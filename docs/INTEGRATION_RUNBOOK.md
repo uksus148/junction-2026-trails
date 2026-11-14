@@ -3,7 +3,7 @@
 This is the shared execution and diagnostic guide for Murat, Mukhamed, and Daniil.
 Read it before changing a service boundary, preparing an integration environment,
 or reporting an end-to-end result. Last checked: November 14, 2026, against
-`main` at `269a4b3` (through merged #46, #50 and #52), plus routing fix PR #54 under review.
+`main` at `173ed44` (through merged #57), plus the internal availability-research core under review.
 The container is not publicly deployed. Earlier live E4 checks retain their original
 revisions below: the API check ran before rebase, and the agent session check used
 an isolated `b51e4d0` snapshot. They do not establish same-revision browser/E5 acceptance.
@@ -43,6 +43,8 @@ Replace pending evidence with a PR/run link and tested revision; retain useful h
 | B7 | Inline Groq tool schema for #48 | Mukhamed | Merged; live probe passed | [#50](https://github.com/uksus148/trego./pull/50), main `e2ba213`, both approvals; Daniil: 5/5 valid resolutions, chat 200 in 39 s; subsequent #51 remains |
 | B8 | Non-root Java 21 API container | Murat | Merged; public deployment pending | [#46](https://github.com/uksus148/trego./pull/46), main `7d89639`; container/CI packaging only, no public deployment |
 | B9 | Evidenced Nominatim candidate selection for #51 | Mukhamed | Merged; live control passed | [#52](https://github.com/uksus148/trego./pull/52), tested `ae6dc82`; 259 fixture tests; Daniil's live discovery/control browser evidence below; #49 still blocks Rysy |
+| B10 | Distinct no-path/unmatched-waypoint handling | Murat, with agent/UI owner reviews | Merged | [#54](https://github.com/uksus148/trego./pull/54), main `41ffe14`; 265 combined agent tests; July-planning demo correction, combined browser acceptance pending |
+| B11 | Internal optional availability research | Mukhamed | Prepared for review; not connected to HTTP chat | [Core and limits](../agent/AVAILABILITY.md); 313 fixture tests; one fresh Exa search/one tool assessment, no live acceptance or public activation |
 | B12 | Optional availability-research boundary | Murat; agent/UI remain with their owners | Java input validation and wire proposal submitted for review from main `4efa575`; public research not enabled | [Contract](ROUTE_AVAILABILITY_CONTRACT.md), [fixtures](contracts/route-availability.examples.json); 204 local API tests passed, including ten strict-input cases; needs affected-owner agreement and chat/UI integration; B10/B11 are reserved by the parallel [#56](https://github.com/uksus148/trego./pull/56) |
 | E1 | Researched place ingestion and OSM deduplication | Murat | Merged | [#45](https://github.com/uksus148/trego./pull/45), both approvals; deploy V3 on the selected target |
 | E2 | HTTP chat orchestration and total deadline | Mukhamed | Merged; default disabled | [#43](https://github.com/uksus148/trego./pull/43); #47 adds selected Groq transport and live checks |

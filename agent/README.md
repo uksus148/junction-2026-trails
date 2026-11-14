@@ -1,5 +1,9 @@
 # trego. Agent
 
+The [optional route-availability research core](AVAILABILITY.md) implements the
+internal agent slice of #54's plan. It is not connected to HTTP chat/startup;
+public source/date delivery and activation remain owner decisions.
+
 The FastAPI `POST /api/chat` endpoint composes discovery, persisted route handoff,
 language-aware replies, and Valkey history. Orchestration is opt-in and fixture-tested;
 the default remains the baseline placeholder until the live prerequisites below pass.
