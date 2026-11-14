@@ -70,3 +70,17 @@ its `timeout_seconds` argument overrides the supplied HTTP client's timeouts.
 `AGENT_PROVIDER_TIMEOUT_SECONDS` supplies the setting for the later chat wiring.
 No automatic paid retries are performed. Live account/model availability has not
 been verified.
+
+## Exa research adapter
+
+`ExaSearch` provides internal text evidence as `{title, sourceUrl, text}`. It keeps
+up to three results, preserves source URLs, and caches successful responses,
+including empty results, in Valkey for 24 hours. Cache keys hash the full search
+request. Missing titles fall back to the source URL; missing text becomes empty.
+Corrupt cache entries are refreshed. A cache outage prevents an uncached paid call.
+Provider errors are not cached or retried, and request timeouts are explicit.
+
+`EXA_API_KEY` loads from the root `.env` as a masked secret. The adapter is not yet
+wired into HTTP chat and does not create API place IDs or infer photo licensing.
+See [the delivery plan](../docs/AGENT_PLAN.md) for the next blocks and the owner
+agreements required before API persistence and route integration.
