@@ -21,16 +21,11 @@ public class PlaceService {
                 ? places.findWithinBounds(bounds.minLon(), bounds.minLat(), bounds.maxLon(), bounds.maxLat())
                 : places.findWithinBoundsAndTags(bounds.minLon(), bounds.minLat(), bounds.maxLon(), bounds.maxLat(),
                         tags.toArray(String[]::new));
-        return matches.stream().map(PlaceService::toPlace).toList();
+        return matches.stream().map(PlaceMapper::toPlace).toList();
     }
 
     @Transactional
     public Place create(NewPlace place) {
-        return toPlace(places.save(new PlaceEntity(place, "manual")));
-    }
-
-    private static Place toPlace(PlaceEntity entity) {
-        return new Place(entity.getId(), entity.getName(), entity.getLat(), entity.getLon(),
-                entity.getTags(), List.of(), entity.getSource());
+        return PlaceMapper.toPlace(places.save(new PlaceEntity(place, "manual")));
     }
 }
