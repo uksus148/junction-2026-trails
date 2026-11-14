@@ -11,6 +11,8 @@ api/
 ├── pom.xml
 ├── src/main/java/io/junction/trails/
 │   ├── TrailsApplication.java
+│   ├── config/
+│   │   └── ApiWebConfiguration.java
 │   └── places/
 │       ├── web/
 │       │   └── PlaceController.java
@@ -24,11 +26,13 @@ api/
 │   └── db/migration/
 │       └── V1__create_places.sql
 └── src/test/java/io/junction/trails/places/web/
-    └── PlaceSearchTest.java
+    ├── PlaceSearchTest.java
+    └── PlaceCorsConfigurationTest.java
 ```
 
 | Package or directory | Responsibility |
 |---|---|
+| `config` | Shared Spring MVC settings, including allowed browser origins |
 | `places/web` | HTTP parameters, response handling, and HTTP errors |
 | `places/model` | Place data and bounding-box validation, independent of Spring and JDBC |
 | `places/persistence` | Parameterized SQL and mapping database rows to models |
@@ -49,6 +53,20 @@ mvn spring-boot:run
 
 Flyway creates the `places` table on first startup. PostGIS and pgvector are enabled by the existing database initialization script. The table starts empty.
 
+Browser requests to `/api/**` allow `http://localhost:5173` by default. Configure
+`API_CORS_ALLOWED_ORIGINS` in the root `.env` or process environment as a
+comma-separated list of exact frontend origins, without quotes. For example,
+if Vite falls back to port 5174 or the frontend is deployed:
+
+```dotenv
+API_CORS_ALLOWED_ORIGINS=http://localhost:5173,http://localhost:5174,https://trails.example.org
+```
+
+Restart the API after changing origins. CORS permits GET and POST with the
+`Content-Type` header, including browser preflight requests. Other origins and
+methods are rejected. This configures browser access; it does not implement the
+planned POST endpoints or enable credentialed cross-origin requests.
+
 ```sh
 curl 'http://localhost:8080/api/places?bbox=20,49,21,50&tags=waterfall'
 ```
@@ -67,7 +85,7 @@ cd api
 mvn verify
 ```
 
-Tests build the existing `infra/postgres` image and start an isolated PostgreSQL 18 container. Flyway applies the migration, and HTTP tests verify filters, boundaries, coordinates, response fields and invalid parameters. Docker must be running. Tests use disposable credentials and a separate database.
+Tests build the existing `infra/postgres` image and start an isolated PostgreSQL 18 container. Flyway applies the migration, and HTTP tests verify filters, boundaries, coordinates, response fields and invalid parameters. Browser-access tests cover GET/POST preflight, successful and invalid search responses, denied origins/methods, and configurable frontend origins. Docker must be running. Tests use disposable credentials and a separate database.
 
 The API workflow runs these checks for API, database image, or workflow changes. The workflow can be exercised on GitHub after this local work has been reviewed and published.
 
