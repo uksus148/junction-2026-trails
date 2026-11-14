@@ -1,18 +1,18 @@
-# Локальная база для разработки
+# Local development database
 
-PostgreSQL 18 с PostGIS и pgvector соответствует основной версии тарифа Free в консоли Aiven. Для запуска нужны Docker с Compose и свободный порт на компьютере.
+PostgreSQL 18 with PostGIS and pgvector matches the major version selected by Aiven Free. Install Docker with Compose and choose a free local port.
 
-Из корня репозитория один раз скопируйте `.env.example` в `.env` и задайте `POSTGRES_PASSWORD`. Если порт 5432 занят, измените `POSTGRES_PORT` в `.env`. Этот же порт используется в `SPRING_DATASOURCE_URL` для API на хосте.
+From the repository root, copy `.env.example` to `.env` once and set `POSTGRES_PASSWORD`. If port 5432 is occupied, change `POSTGRES_PORT` in `.env`. The API running on the host uses the same port in `SPRING_DATASOURCE_URL`.
 
 ```sh
 docker compose --env-file .env -f infra/compose.yaml up --build --wait
 docker compose --env-file .env -f infra/compose.yaml exec -T db sh -c 'psql -X -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB"' < infra/smoke.sql
 ```
 
-Проверка выполняет геозапрос и сравнивает два вектора. Она завершится с ошибкой, если начальная настройка пропустила расширение или результат вычисления неверен. Тот же SQL выполняется в GitHub Actions при изменениях в `infra/`.
+The smoke test checks a spatial query and a vector distance. It fails if initialization omitted either extension or a calculation returns the wrong result. GitHub Actions runs the same SQL for PR changes under `infra/`.
 
 ```sh
 docker compose --env-file .env -f infra/compose.yaml down
 ```
 
-Данные остаются в именованном томе между запусками. При первом запуске на пустом томе PostgreSQL включает `postgis` и `vector`. Таблицы приложения создаются миграциями Flyway в модуле `api/` по мере его разработки.
+The named volume retains data between runs. On its first start with an empty volume, PostgreSQL enables `postgis` and `vector`. Flyway migrations in the `api/` module will create application tables as the API is developed.
