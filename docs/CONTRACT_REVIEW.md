@@ -29,16 +29,16 @@ Connect the original chat, places, and route flow to live services first. Discus
 
 Before implementing the relevant HTTP handlers, the backend will propose identifier types, success and error status codes, and the photo upload response in a dedicated PR. Review those details with the frontend and agent.
 
-## Proposed hiking route handoff after PR #31
+## Accepted hiking route handoff after PR #34
 
-[The agent/API handoff proposal](AGENT_API_HANDOFF.md) supplies concrete examples
+[The accepted agent/API handoff contract](AGENT_API_HANDOFF.md) supplies concrete examples
 for optional research provenance on place creation, OSM deduplication into API
 UUIDs, ordered route persistence, machine-readable errors, and chat completion.
-It records Daniil's explicit D1/D3/D4/D5 acceptance and required frontend
-integration work. Murat's personal API/storage decision remains pending; a
-technical COMMENT from his account is not architectural approval. No new write
-endpoint behavior or schema is approved by that document alone. The merged read API's
-UUID strings and the original public Place/Route/chat shapes remain the baseline.
+Murat explicitly accepted D1–D4 and Daniil D1/D3/D4/D5 in merged PR #34;
+[the canonical contract](../CLAUDE.md#accepted-sourced-place-and-route-handoff)
+now publishes that agreement. #33 implements manual creation only. Research
+provenance/OSM ingestion and routing remain API implementation work; #35–#37
+complete the frontend follow-ups, with real-service acceptance still pending.
 
 ## Recording agreement
 

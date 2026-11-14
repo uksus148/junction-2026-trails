@@ -91,8 +91,8 @@ Agree changes with the affected developers and record them here.
   source cannot override the manual source. The creation transaction commits before returning
   success, and a matching subsequent bbox/tag search returns the saved place. Separate creation
   requests create separate records; manual creation has no deduplication guarantee. These
-  manual-write details were confirmed by the frontend and agent owners in PR #33. Researched
-  provenance, OSM deduplication, and route handoff require separate agreement.
+  manual-write details were confirmed by the frontend and agent owners in PR #33.
+  The accepted researched-write extension below requires its own API implementation.
 - `POST /api/routes` `{start:{lat,lon}, end:{lat,lon}, placeIds[], preferences[]}` → `Route` (api)
 - `GET /api/routes/{id}` → `Route`
 - `POST /api/photos` multipart `{file, lat, lon}` publishes Kafka event `photo.uploaded`
@@ -100,19 +100,73 @@ Agree changes with the affected developers and record them here.
 - `Photo = {url, thumbUrl, author, license, sourceUrl, lat, lon}`
 - `Route = {id, geojson(LineString), distanceKm, ascentM, durationMin, places:[Place], segments:[{fromKm,toKm,photos:[Photo]}]}`
 
-### Sourced place and route handoff agreement
+### Accepted sourced place and route handoff
 
-[docs/AGENT_API_HANDOFF.md](docs/AGENT_API_HANDOFF.md) records optional research
-provenance for place creation, atomic OSM deduplication into persisted UUIDs,
-ordered route handoff, error codes, and chat completion. Daniil explicitly
-accepted D1/D3/D4/D5 in [his PR #34 response](https://github.com/uksus148/junction-2026-trails/pull/34#pullrequestreview-5901154716)
-and owns the recorded frontend integration tasks. Murat subsequently
-[accepted D1–D4 as the API/storage owner](https://github.com/uksus148/trego/pull/34#pullrequestreview-5904059886),
-superseding the earlier pending-decision status. The researched-write extension
-and agent orchestration are not implemented in this route increment. Publish
-their detailed accepted contract here with their implementation PRs. The route
-semantics and separately proposed cache rollout are recorded below; agreement
-does not establish completed runtime integration.
+The design in [docs/AGENT_API_HANDOFF.md](docs/AGENT_API_HANDOFF.md) was accepted
+in merged PR #34: [Murat accepted D1–D4 personally](https://github.com/uksus148/trego/pull/34#pullrequestreview-5904059886),
+and [Daniil accepted D1/D3/D4/D5 and the clarified frontend work](https://github.com/uksus148/trego/pull/34#pullrequestreview-5903913530).
+Mukhamed owns the agent implementation. Agreement is not runtime availability:
+main includes manual creation and persisted routes (#39). Researched ingestion
+and the required routing cache still need reviewed implementations before live
+chat-to-route activation; cache follow-up #41 is under review.
+
+- **Researched ingestion (D1/D2):** `POST /api/places` adds optional, complete
+  `provenance: {sourceUrl, osmType, osmId}`. The URL is HTTP(S), `osmType` is
+  `node|way|relation`, and `osmId` is a positive integer. Manual clients omit it.
+  Unknown fields/partial provenance produce 400. Researched `Place.source` is
+  the selected research URL; OSM identity is stored separately. New writes return
+  201 with a complete Place. Atomic uniqueness on `(osmType, osmId)` returns 200
+  with the existing Place on replay, including concurrent submissions. First
+  write wins for name, coordinates, tags and selected source; consumers use the
+  authoritative returned record. Never deduplicate by names/rounded coordinates
+  or submit research through the manual path while discarding its source.
+
+  ```json
+  {"name":"Skok waterfall","lat":49.1605,"lon":20.0458,"tags":["waterfall"],"provenance":{"sourceUrl":"https://example.org/hikes/skok","osmType":"node","osmId":100000001}}
+  ```
+
+- **Routing (D3):** persist all resolved start/stop/end findings; pass returned
+  start/end coordinates and ordered intermediate UUIDs to `POST /api/routes`.
+  Preserve repeated visits; do not automatically add endpoints as intermediate
+  stops. `placeIds: []` is a direct hike. Resolve UUIDs before ORS `foot-hiking`;
+  reject unsupported waypoint counts rather than dropping stops. Cache provider
+  responses for 24 hours by a hash of all routing inputs and persist the route
+  before returning 201 with a full Route. `Route.places` contains only ordered
+  intermediate places, including repeats. GET returns the saved Route (200), or
+  404 for a missing route. Only return a fetchable, persisted routeId. Keep WGS84,
+  `[lon,lat]` GeoJSON, km/m/min units, and actual provider geometry. Empty segments
+  and photos are allowed. Preferences remain descriptive interests, without an
+  implied routing/ranking effect. Route POST is not idempotent; no automatic POST
+  retries, including lost responses. Earlier places/routes may survive failures.
+
+  ```json
+  {"start":{"lat":49.119,"lon":20.063},"end":{"lat":49.179,"lon":20.088},"placeIds":["00000000-0000-4000-8000-000000000002"],"preferences":["wild scenery"]}
+  ```
+
+- **Errors (D4):** new write/route errors use Problem Details with required
+  `type`, `title`, `status`, English `detail`, and a stable `code`. Existing GET
+  place-search errors remain compatible. Codes/statuses are `invalid_request`
+  (400), `unknown_place` and `no_hiking_route` (422), `routing_provider_error`
+  (502), `storage_unavailable` and `cache_unavailable` (503), `routing_timeout`
+  (504), and `route_not_found` (404). Only verified `no_hiking_route` becomes a
+  normal chat reply asking for different waypoints. Dependency failures remain
+  honest errors: the agent retains its `detail` envelope with 502 for dependency
+  failures/invalid responses, 503 for storage/cache, and 504 for deadlines. An
+  unknown UUID after ingestion is a dependency inconsistency. Never expose
+  credentials/provider bodies or identify errors by parsing English text.
+
+- **Chat completion (D5):** retain `{sessionId,message}` and `{reply,places,routeId?}`.
+  Read recent history before discovery. Missing/ambiguous places or excessive
+  intent limits produce a normal 200 clarification with `places: []`, no routeId,
+  and no partial writes. Complete discovery ingests places, creates/validates the
+  saved route, records the exchange, and returns persisted Place records in
+  start/stops/end visit order, deduplicated by UUID at first occurrence for map
+  display. Route visits still retain repeats. Replies/clarifications use the
+  user's message language; UI labels stay English. Storage failure after route
+  creation returns 503 without claiming the exchange was saved. Frontend retains
+  endpoint metadata/sources alongside the fetched route, anchors markers to track
+  ends, resets stale manual endpoints, and displays sources/OSM attribution.
+  Frontend follow-ups #35–#37 are merged; live acceptance remains required.
 
 ### Route implementation selected by Murat
 
@@ -270,9 +324,14 @@ Role-specific skills listed in the original team plan follow.
 - November 14 — Every PR requires review and approval by at least one developer other than the author, including internal changes that affect no other component. Request review from owners of the components affected by a PR. GitHub requires one independent approval. Additional reviewers are selected when their components or shared contracts are affected. Murat's assistant reviews backend, shared infrastructure, repository governance, and backend-facing integration. In a stack, retarget the next PR to main before merging it (#14 and #15 landed in stack branches and were re-landed in #21).
 - November 14 — The hiking-intent adapter uses Claude tool use with a validated `{start, end, mustSee[], preferences[]}` result and at most six recent session exchanges. Blank values are normalized; results exceeding five intermediate stops or twelve preferences require user clarification. Provider requests have explicit timeouts and no automatic paid retries. The HTTP chat contract stays on the baseline; connecting intent and place discovery is a later block.
 - November 14 — The internal Exa text-research adapter retains source URLs and caches responses in Valkey for 24 hours. [The agent delivery plan](docs/AGENT_PLAN.md) records sequential blocks and unresolved integration gates; shared API/schema/event proposals remain unapproved until the affected owners agree.
-- November 14 — Internal place discovery combines intent, source-grounded resolution, and cached, rate-limited Nominatim lookup. The merged place API returns UUID strings; discovery findings retain research and OSM identity separately. The HTTP chat contract stays unchanged, and API write/route handoff remains pending owner agreement. Daniil confirmed in PR #28 that chat and clarification replies follow the user's message language, while UI labels remain English.
+- November 14 — Internal place discovery combines intent, source-grounded resolution, and cached, rate-limited Nominatim lookup. The merged place API returns UUID strings; discovery findings retain research and OSM identity separately. The HTTP chat contract stays unchanged; API write/route handoff needed owner agreement at this stage (subsequently accepted in #34). Daniil confirmed in PR #28 that chat and clarification replies follow the user's message language, while UI labels remain English.
 
 - November 14 — Murat selected Spring Data JPA for ordinary API persistence, with Hibernate Spatial for PostGIS mapping. Native JPA queries preserve the current spatial filters; JDBC remains an option for complex queries. Flyway continues to own schema changes, and application services own transaction boundaries. The implementation and shared documentation changes require the normal PR review.
+
+- November 14 — PR #34's final owner approvals accept researched provenance/OSM
+  deduplication, ordered route persistence, structured errors and chat completion.
+  These decisions are now published above. Internal agent handoff is fixture-tested;
+  enabling HTTP chat still requires the API handlers and live acceptance.
 
 ## Open questions and completed checks
 
