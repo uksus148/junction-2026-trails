@@ -1,7 +1,8 @@
 import type { LatLon, NewPlace } from '../types'
 
-// Demo scenario (mock mode only): Štrbské Pleso → Skok waterfall → Popradské pleso → Rysy.
-// Coordinates are approximate; real data comes from the backend.
+// Demo scenario (mock mode only): Štrbské Pleso → Skok waterfall → Popradské pleso, a July hike.
+// Rysy was dropped: ORS foot-hiking cannot match it (issue #49, code 2010); see docs/ROUTING_DIAGNOSTICS.md.
+// Coordinates follow the OSM objects the live agent selects; real data comes from the backend.
 
 export const DEMO_START: LatLon & { name: string } = { name: 'Štrbské Pleso', lat: 49.1191, lon: 20.0627 }
 
@@ -13,36 +14,33 @@ export const DEMO_START_PLACE: NewPlace & { id: string; source: string } = {
   source: 'https://en.wikipedia.org/wiki/%C5%A0trbsk%C3%A9_Pleso',
 }
 
+const DEMO_FINISH: NewPlace & { id: string; source: string } = {
+  id: 'demo-popradske-pleso',
+  name: 'Popradské pleso',
+  lat: 49.1534,
+  lon: 20.0796,
+  tags: ['lake'],
+  source: 'https://en.wikipedia.org/wiki/Popradsk%C3%A9_pleso',
+}
+
+/** Stops in visit order; the last one is the finish (the mock route uses all but the last as stops). */
 export const DEMO_PLACES: (NewPlace & { id: string; source: string })[] = [
   {
     id: 'demo-skok',
     name: 'Skok Waterfall',
-    lat: 49.1425,
-    lon: 20.0506,
+    lat: 49.1531,
+    lon: 20.0453,
     tags: ['waterfall'],
     source: 'https://en.wikipedia.org/wiki/Skok_Waterfall',
   },
-  {
-    id: 'demo-popradske-pleso',
-    name: 'Popradské pleso',
-    lat: 49.1534,
-    lon: 20.0796,
-    tags: ['lake', 'viewpoint'],
-    source: 'https://en.wikipedia.org/wiki/Popradsk%C3%A9_pleso',
-  },
-  {
-    id: 'demo-rysy',
-    name: 'Rysy',
-    lat: 49.1795,
-    lon: 20.088,
-    tags: ['peak', 'viewpoint'],
-    source: 'https://en.wikipedia.org/wiki/Rysy',
-  },
+  DEMO_FINISH,
 ]
 
-export const DEMO_END: LatLon = { lat: 49.1795, lon: 20.088 }
+export const DEMO_END: LatLon = { lat: DEMO_FINISH.lat, lon: DEMO_FINISH.lon }
 
-export const DEMO_ASCENT_M = 1250
+/** Ascent of the live ORS route for this scenario (docs/ROUTING_DIAGNOSTICS.md: about 741 m). */
+export const DEMO_ASCENT_M = 741
 
+/** Revised E5 scenario from #54; keep in sync with the demo request in CLAUDE.md. */
 export const DEMO_PROMPT =
-  'I want to hike from Štrbské Pleso up to Rysy and see the Skok waterfall on the way. I love wild views.'
+  'Plan a summer hike in July from Štrbské Pleso to Popradské pleso via the Skok waterfall. I love wild scenery.'
