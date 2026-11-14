@@ -26,6 +26,20 @@ def words(text: str) -> set[str]:
     return set(re.findall(r"\w+", text.casefold()))
 
 
+# Source-side metadata grammar, independent of the assessor's date-role labels.
+# Unsupported/ambiguous publication formats remain unconfirmed.
+PUBLICATION_FACT = re.compile(
+    r"(?:^|[.!?]\s+)\s*((?:published(?:\s+on)?|publication\s+date|"
+    r"(?:last\s+)?updated(?:\s+on)?|last\s+modified)(?:\s*:\s*|\s+)"
+    r"(\d{4}-\d{2}-\d{2})(?!\d))", re.IGNORECASE | re.MULTILINE,
+)
+
+
+def publication_is_bound(text: str, excerpt: str, claimed_date: str) -> bool:
+    return any(iso_date == claimed_date and normalized(fact) in excerpt
+               for fact, iso_date in PUBLICATION_FACT.findall(text))
+
+
 class AvailabilityResearch:
     def __init__(self, search: ExaSearch, model: ToolModel, model_id: str,
                  policy: ResearchPolicy, *, budget_seconds: float = 20) -> None:
@@ -105,7 +119,7 @@ class AvailabilityResearch:
             published = normalized(draft.publishedQuote)
             if (quote not in text or published not in text or not words(section) <= words(quote)
                     or not words(jurisdiction) <= words(text)
-                    or draft.publishedOn.isoformat() not in published
+                    or not publication_is_bound(source.text, published, draft.publishedOn.isoformat())
                     or draft.validFrom.isoformat() not in quote or draft.validTo.isoformat() not in quote
                     or draft.validFrom > draft.validTo):
                 raise ValueError("Unbound scope, quote or dates.")

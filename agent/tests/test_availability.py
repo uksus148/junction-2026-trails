@@ -193,3 +193,20 @@ async def test_wrong_jurisdiction_and_missing_iso_dates_are_not_treated_as_verif
                    {**SOURCE, "text": SOURCE["text"].replace("2026-11-01", "November 1")}):
         result, _ = await run(sources=[source])
         assert result.status == "unconfirmed" and not result.findings
+
+
+@pytest.mark.parametrize("published_quote", [QUOTE, f"Published: 2024-01-01. {QUOTE}"])
+async def test_applicability_date_cannot_replace_the_actual_old_publication_date(published_quote):
+    source = {**SOURCE, "text": f"Slovakia. Published: 2024-01-01. {QUOTE}"}
+    draft = {**NOTICE, "publishedQuote": published_quote, "publishedOn": "2026-11-01"}
+    result, calls = await run({"findings": [draft]}, sources=[source])
+    assert result.status == "unconfirmed" and not result.findings and len(calls) == 2
+
+
+@pytest.mark.parametrize("label", ["Published:", "Published on", "Last updated:", "Publication date:"])
+async def test_literal_source_publication_or_update_role_is_accepted_even_on_the_start_date(label):
+    fact = f"{label} 2026-11-01."
+    source = {**SOURCE, "text": f"Slovakia. {fact} {QUOTE}"}
+    draft = {**NOTICE, "publishedQuote": fact, "publishedOn": "2026-11-01"}
+    result, _ = await run({"findings": [draft]}, sources=[source])
+    assert result.status == "evidence_found" and result.findings[0].publishedQuote == fact
