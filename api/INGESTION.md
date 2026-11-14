@@ -1,10 +1,11 @@
 # Researched place ingestion
 
-This branch implements E1 of the [integration runbook](../docs/INTEGRATION_RUNBOOK.md)
+Merged PR #45 implements E1 of the [integration runbook](../docs/INTEGRATION_RUNBOOK.md)
 on the existing `POST /api/places`, following the accepted D1/D2 contract in
-[CLAUDE.md](../CLAUDE.md#accepted-sourced-place-and-route-handoff). It is submitted
-for independent review. The isolated E4 backend live check passed; implementation
-merge, enabled chat and browser acceptance remain separate gates.
+[CLAUDE.md](../CLAUDE.md#accepted-sourced-place-and-route-handoff). Both affected owners
+approved the final head, including the additional validation constraints below.
+The isolated E4 backend live check passed; enabled chat and browser acceptance remain
+separate gates.
 
 ## Follow a request
 
@@ -46,7 +47,7 @@ See [PostgreSQL isolation](https://www.postgresql.org/docs/18/transaction-iso.ht
 - Omitted provenance means manual creation; explicit null, partial/non-object provenance,
   unknown fields, non-HTTP(S) URLs and invalid OSM types/IDs produce 400 without writes.
 - Unknown fields now include a submitted `source`; clients must use the documented shape.
-- Implementation details to confirm with Mukhamed: positive signed-64-bit IDs (PostgreSQL
+- Implementation constraints accepted by Mukhamed in #45: positive signed-64-bit IDs (PostgreSQL
   bigint), no fractional/string coercion, and source URLs without embedded credentials or
   out-of-range ports. No name/tag/source truncation or new list limits are introduced.
 - Write errors use Problem Details with `invalid_request` (400) or `storage_unavailable`
@@ -83,4 +84,4 @@ deleting only this request's cache entry. Temporary schema/cache data was remove
 A separate current-main agent snapshot passed managed Aiven session storage and CORS
 with live chat disabled. See the [shared E4 evidence](../docs/INTEGRATION_RUNBOOK.md#e4-live-backend-evidence)
 and ignored `api/target/e4-live-report.json`. Claude/Exa credentials and account/model
-access remain unverified; neither E1 merge nor the full browser/Tatras workflow is claimed.
+access remain unverified. E1 is merged; the full browser/Tatras workflow remains pending.

@@ -3,8 +3,10 @@
 This is the shared execution and diagnostic guide for Murat, Mukhamed, and Daniil.
 Read it before changing a service boundary, preparing an integration environment,
 or reporting an end-to-end result. Last checked: November 14, 2026, against
-`main` at `08726c3` (through merged #47), plus the #48 schema fix prepared for review. The live API
-check ran before rebase; the agent session check used an isolated `b51e4d0` snapshot.
+`main` at `e2ba213` (through merged #50), plus API container PR #46 under review.
+The container is not publicly deployed. Earlier live E4 checks retain their original
+revisions below: the API check ran before rebase, and the agent session check used
+an isolated `b51e4d0` snapshot. They do not establish same-revision browser/E5 acceptance.
 
 ## Authority and keeping the team aligned
 
@@ -38,7 +40,8 @@ Replace pending evidence with a PR/run link and tested revision; retain useful h
 | B4 | Frontend route/source/error compatibility | Daniil | Merged | #35-#37; live browser acceptance pending |
 | B5 | Reuse source-grounded Claude resolutions | Mukhamed | Merged | [#44](https://github.com/uksus148/trego./pull/44), main `440f69d`; 202 agent fixture tests; live latency unmeasured |
 | B6 | Groq GPT OSS 20B and executable live checks | Mukhamed | Merged; live resolution blocked | [#47](https://github.com/uksus148/trego./pull/47), main `08726c3`: 236 fixture tests; Daniil reported #48 during live testing |
-| B7 | Inline Groq tool schema for #48 | Mukhamed | Prepared for review; live rerun pending | [#48](https://github.com/uksus148/trego./issues/48); 246 fixture tests; request Murat and Daniil, then rerun live resolution/browser matrix |
+| B7 | Inline Groq tool schema for #48 | Mukhamed | Merged | [#50](https://github.com/uksus148/trego./pull/50), main `e2ba213`; 246 fixture tests; record live rerun evidence separately |
+| B8 | Non-root Java 21 API container | Murat | Prepared; awaiting re-review | [#46](https://github.com/uksus148/trego./pull/46); container/CI packaging only, no public deployment |
 | E1 | Researched place ingestion and OSM deduplication | Murat | Merged | [#45](https://github.com/uksus148/trego./pull/45), both approvals; deploy V3 on the selected target |
 | E2 | HTTP chat orchestration and total deadline | Mukhamed | Merged; default disabled | [#43](https://github.com/uksus148/trego./pull/43); #47 adds selected Groq transport and live checks |
 | E3 | Real-service frontend verification | Daniil | Attempted; blocked by #48 | Rerun with reviewed schema fix; verify direct/chat routes, sources, markers and errors |
@@ -49,7 +52,7 @@ Before E1, the merged manual endpoint ignored provenance and assigned `source: "
 the agent rejected that response after a possible committed write. E1 removes this mismatch
 in merged #45; deploy reviewed V3 and pass E4 before enabling the live flow. Invalid
 provenance must never fall back to manual creation.
-The working branch incorporates #43 and #44. Compatibility evidence includes agent
+The checked main incorporates #43, #44 and #45. Compatibility evidence includes agent
 fixture tests and a real Python handoff -> Spring/local data services smoke with fixture ORS.
 This does not activate live chat or complete E5.
 
