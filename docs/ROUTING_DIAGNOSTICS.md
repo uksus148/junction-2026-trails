@@ -1,8 +1,8 @@
 # Routing failures and the Tatras demo
 
 Prepared for issue [#49](https://github.com/uksus148/trego./issues/49) on
-`fix/routing-waypoint-errors`, based on main `e2ba213`. Murat requested the error
-distinction and authorized a demo correction. The API extension and revised demo
+`fix/routing-waypoint-errors`, originally based on main `e2ba213` and now on `269a4b3`.
+Murat requested the error distinction and authorized a demo correction. The API extension and revised demo
 await affected-owner review; this is not completed E5 acceptance.
 
 ## Preserve the routing conditions
@@ -26,6 +26,10 @@ Authentication, quota, outages and timeouts are not reclassified. Match structur
 numeric codes, not English provider messages; never expose provider bodies.
 Neither result establishes a closure, season, difficulty exclusion or bad coordinate
 as its cause. Do not identify a particular failed point without structured evidence.
+
+This does not prohibit independently researching restrictions. The
+[team research plan](ROUTE_AVAILABILITY_RESEARCH_PLAN.md) proposes a later opt-in flow
+with dated sources; it must keep an external finding separate from the cause of ORS failure.
 
 The agent recognizes each complete 422 Problem Details response as its own typed result.
 For an unmatched waypoint, it asks to check coordinates or choose another point, with
@@ -70,9 +74,11 @@ does not guarantee safety/open access or prove that the provider used the July c
 Calendar-aware routing is not implemented by this wording change.
 
 Daniil should align the visible demo suggestion after agreement; existing frontend
-mock fixtures remain mock-only and were not rewritten here. Mukhamed owns the separate
-Nominatim query/ambiguity issue [#51](https://github.com/uksus148/trego./issues/51), which
-can still prevent chat from reaching the now-distinct routing outcomes.
+mock fixtures remain mock-only and were not rewritten here. The separate Nominatim
+query/ambiguity correction for [#51](https://github.com/uksus148/trego./issues/51) merged
+in #52. Verify the combined flow on the recorded revision. Its canonical lake coordinates
+can differ from the manually supplied #49 coordinates above; do not assume identical
+route metrics or move those authoritative coordinates to reproduce this diagnostic.
 
 
 ## Regression evidence
@@ -84,11 +90,11 @@ and check no retry, cache entry or route write after a matching failure. The ini
 full run exposed an incorrect expected `/ors` fixture prefix in the new test; corrected
 that test and completed verification without changing production request URLs.
 
-Agent fixtures passed 252 tests, including actual HTTP handoff -> typed matching failure
+Agent fixtures passed 265 tests after incorporating #52, including HTTP handoff -> typed matching failure
 -> distinct reply facts/session recording without a route ID. The reply prompt prohibits
 unconfirmed closure/season/difficulty causes; no live LLM run is claimed by these fixtures.
 Frontend passed 31 tests and its production build under Node 24. Runtime frontend behavior
 is unchanged; its existing API client retains the new code/detail. Dependency deprecation
-and frontend chunk-size warnings remain non-blocking. No GitHub CI result is claimed for
-this local unpublished branch. The summarized live evidence is in the ignored generated
+and frontend chunk-size warnings remain non-blocking. See the PR for its actual GitHub
+CI result. The summarized live evidence is in the ignored generated
 `api/target/demo-routing-report.json`; no provider key is included.

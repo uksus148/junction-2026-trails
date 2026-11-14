@@ -89,6 +89,11 @@ I love wild scenery." It routed with the same provider/options. The MVP has no d
 routing engine; seasonal evidence and [routing diagnostics](docs/ROUTING_DIAGNOSTICS.md)
 are separate from the provider failure code.
 
+The [route-availability research plan](docs/ROUTE_AVAILABILITY_RESEARCH_PLAN.md) is a
+team proposal for a later opt-in investigation of official restrictions and planning
+dates. It does not enable new runtime research or accept new chat fields. Independently
+verified restrictions may be reported with sources; they are not proof of why ORS failed.
+
 ### API contract
 
 Agree changes with the affected developers and record them here.

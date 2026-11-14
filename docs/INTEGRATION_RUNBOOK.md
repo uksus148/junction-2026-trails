@@ -3,7 +3,7 @@
 This is the shared execution and diagnostic guide for Murat, Mukhamed, and Daniil.
 Read it before changing a service boundary, preparing an integration environment,
 or reporting an end-to-end result. Last checked: November 14, 2026, against
-`main` at `7d89639` (through merged #46 and #50), plus geocoding PR #52 under review.
+`main` at `269a4b3` (through merged #46, #50 and #52), plus routing fix PR #54 under review.
 The container is not publicly deployed. Earlier live E4 checks retain their original
 revisions below: the API check ran before rebase, and the agent session check used
 an isolated `b51e4d0` snapshot. They do not establish same-revision browser/E5 acceptance.
@@ -42,7 +42,7 @@ Replace pending evidence with a PR/run link and tested revision; retain useful h
 | B6 | Groq GPT OSS 20B and executable live checks | Mukhamed | Merged | [#47](https://github.com/uksus148/trego./pull/47), main `08726c3`; resolution failure subsequently fixed in #50 |
 | B7 | Inline Groq tool schema for #48 | Mukhamed | Merged; live probe passed | [#50](https://github.com/uksus148/trego./pull/50), main `e2ba213`, both approvals; Daniil: 5/5 valid resolutions, chat 200 in 39 s; subsequent #51 remains |
 | B8 | Non-root Java 21 API container | Murat | Merged; public deployment pending | [#46](https://github.com/uksus148/trego./pull/46), main `7d89639`; container/CI packaging only, no public deployment |
-| B9 | Evidenced Nominatim candidate selection for #51 | Mukhamed | Under re-review; live control passed | [#52](https://github.com/uksus148/trego./pull/52), tested `ae6dc82`; 259 fixture tests; Daniil's live discovery/control browser evidence below; #49 still blocks Rysy |
+| B9 | Evidenced Nominatim candidate selection for #51 | Mukhamed | Merged; live control passed | [#52](https://github.com/uksus148/trego./pull/52), tested `ae6dc82`; 259 fixture tests; Daniil's live discovery/control browser evidence below; #49 still blocks Rysy |
 | E1 | Researched place ingestion and OSM deduplication | Murat | Merged | [#45](https://github.com/uksus148/trego./pull/45), both approvals; deploy V3 on the selected target |
 | E2 | HTTP chat orchestration and total deadline | Mukhamed | Merged; default disabled | [#43](https://github.com/uksus148/trego./pull/43); #47 adds selected Groq transport and live checks |
 | E3 | Real-service frontend verification | Daniil | Live control route verified; full matrix pending | [#52 review](https://github.com/uksus148/trego./pull/52), tested `ae6dc82`; control track/sources and Rysy no-route behavior passed; record remaining acceptance cases |
@@ -428,4 +428,5 @@ and the agent's distinct clarification need affected-owner review. Both errors r
 uncached and create no route; earlier place writes may remain. Do not infer closure,
 season or difficulty from the code. Two bounded live requests reproduced the Rysy failure
 and verified the July-planning alternative in [routing diagnostics](ROUTING_DIAGNOSTICS.md).
-This does not complete E5: geocoding issue #51 and same-revision browser acceptance remain.
+This does not complete E5: #51's correction is merged in #52, and same-revision browser
+acceptance with the routing fix/revised demo remains.
