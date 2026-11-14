@@ -24,6 +24,13 @@ Keep manual creation exactly as the frontend sends it today:
 {"name":"My viewpoint","lat":49.15,"lon":20.07,"tags":["viewpoint"]}
 ```
 
+The API's concurrent [manual-creation PR #33](https://github.com/uksus148/junction-2026-trails/pull/33)
+builds on #32. This proposal extends that work after its own review/merge; it does
+not replace the JPA foundation or treat unmerged handlers as available. Keep its
+proposed normalization: all four baseline fields required, empty tags allowed,
+names/tags trimmed, and duplicate tags removed in first-occurrence order with
+case preserved.
+
 Without `provenance`, the API creates a manual place with `source: "manual"`.
 The agent supplies the same fields plus the selected research URL and OSM identity:
 
