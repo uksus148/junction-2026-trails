@@ -39,8 +39,12 @@ ledger, environment prerequisites, diagnostic sequence and actual end-to-end evi
 - E1 merged in #45. #47 merged Groq, executable preflight/HTTP route acceptance
   and agent fixture CI (236 passing tests). Daniil's live run on main `08726c3`
   found a Groq resolution failure in [#48](https://github.com/uksus148/trego./issues/48).
-  The current fix inlines Groq tool schemas, preserves typed validation and passes
-  246 fixture tests. Live rerun and Murat's separate ORS/Rysy investigation
+  #50 merged the schema fix on main `e2ba213`; both reviewers approved and Daniil
+  confirmed 5/5 valid live Groq resolutions. His follow-up
+  [#51](https://github.com/uksus148/trego./issues/51) identifies Nominatim query,
+  ambiguity and negative-cache failures. The current fix uses evidenced name/type
+  matching, independently resolved geographic context and versioned candidate caches.
+  Review/live rerun and Murat's separate ORS/Rysy investigation
   ([#49](https://github.com/uksus148/trego./issues/49)) still gate E3/E5.
 - Mukhamed implements the agent; Murat owns the API/storage boundary; Daniil owns
   the frontend/chat boundary. Request both teammates for each agent PR.
@@ -59,7 +63,7 @@ against current contracts. Closed PRs #23–#25 are references, not a merge queu
 | 1 | Exa text research and Valkey caching, merged in #28 and #31 | Sources retain URLs; repeated queries use a 24-hour cache; mixed-result resilience is tested |
 | 2 | Source-grounded resolution, Nominatim, and internal discovery, merged in #31 | A request yields ordered sourced findings with unique WGS84 coordinates and attribution; ambiguous/missing places stay unresolved; shared rate limits, caching, and overall deadlines are tested |
 | 3 | API ingestion and route handoff agreement, accepted in #34 | Owner approvals are linked and D1–D5 decisions/examples are published in CLAUDE.md |
-| 4 | Chat-to-route orchestration; E1/E2 and Groq support merged, default disabled | Review the #48 fix, pass selected-provider E4, investigate ORS/Rysy, then verify real frontend routes (E3-E5) |
+| 4 | Chat-to-route orchestration; E1/E2 and Groq fix merged, default disabled | Review/rerun the #51 geocoding fix, investigate #49 ORS/Rysy, then verify real frontend routes (E3-E5) |
 | 5 | Licensed photos along the hike | Each displayed photo has author, license, sourceUrl, and coordinates; routes/photos follow the existing units and segment shapes |
 | 6 | Gemini embeddings and pgvector ranking | Model/dimension and Flyway schema are agreed; preferences rank places/captions; repeated indexing is idempotent |
 | 7 | Kafka upload processing and EXIF | photo.uploaded payload/storage access are agreed; consumer handles missing EXIF, duplicates, retries, and nearby trail association |

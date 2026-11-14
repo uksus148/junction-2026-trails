@@ -13,7 +13,7 @@ from gopstop_agent.geocoding import GeocodedPlace, NominatimGeocoder, OSM_ATTRIB
 from gopstop_agent.intent import ClaudeIntentExtractor, Message, ProviderTimeout, RouteIntent
 from gopstop_agent.llm import ToolModel, create_tool_model
 from gopstop_agent.resolution_cache import CachedPlaceResolver
-from gopstop_agent.resolver import ClaudePlaceResolver
+from gopstop_agent.resolver import ClaudePlaceResolver, SourceResolution
 
 
 class DiscoveredPlace(BaseModel):
@@ -64,6 +64,21 @@ class PlaceDiscovery:
                 with stage("intent"):
                     intent = await self._intent.extract(message, history)
 
+                resolutions: dict[str, SourceResolution] = {}
+
+                async def locate(finding: PlaceFinding, resolution: SourceResolution,
+                                 anchors: list[GeocodedPlace]) -> None:
+                    with stage("geocoding"):
+                        location = await self._geocoder.geocode(
+                            resolution.geocodeQuery, name=resolution.name,
+                            tags=resolution.tags, anchors=anchors,
+                        )
+                    if location is not None:
+                        finding.place = DiscoveredPlace(
+                            name=resolution.name, tags=resolution.tags,
+                            source=finding.sources[resolution.sourceIndex], location=location,
+                        )
+
                 async def find(description: str) -> PlaceFinding:
                     query = (f"Find hiking place: {description}. Route context: "
                              f"{intent.start or 'unspecified'} to {intent.end or 'unspecified'}.")
@@ -73,13 +88,8 @@ class PlaceDiscovery:
                     with stage("resolution"):
                         resolution = await self._resolver.resolve(query, sources)
                     if resolution is not None:
-                        with stage("geocoding"):
-                            location = await self._geocoder.geocode(resolution.geocodeQuery)
-                        if location is not None:
-                            finding.place = DiscoveredPlace(
-                                name=resolution.name, tags=resolution.tags,
-                                source=sources[resolution.sourceIndex], location=location,
-                            )
+                        resolutions[description] = resolution
+                        await locate(finding, resolution, [])
                     return finding
 
                 limit = asyncio.Semaphore(3)
@@ -98,6 +108,14 @@ class PlaceDiscovery:
                         if not task.done():
                             task.cancel()
                     await asyncio.gather(*tasks.values(), return_exceptions=True)
+                # Reconsider ambiguous candidate sets using only independently
+                # resolved route points. Reuse search results without another model
+                # call; do not cascade a contextual choice into new anchors.
+                anchors = [task.result().place.location for task in tasks.values() if task.result().place]
+                if anchors:
+                    for name, task in tasks.items():
+                        if task.result().place is None and name in resolutions:
+                            await locate(task.result(), resolutions[name], anchors)
                 start = tasks[intent.start].result() if intent.start is not None else None
                 stops = [tasks[name].result() for name in intent.mustSee]
                 end = tasks[intent.end].result() if intent.end is not None else None

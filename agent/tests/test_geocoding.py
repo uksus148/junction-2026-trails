@@ -27,7 +27,7 @@ async def test_coordinates_attribution_request_identity_and_cache(cache):
         calls.append(request)
         assert request.headers["User-Agent"] == "Trails/1.0 team@example.org"
         assert request.url.params["q"] == "Skok, High Tatras, Slovakia"
-        assert request.url.params["limit"] == "2"
+        assert request.url.params["limit"] == "8" and request.url.params["namedetails"] == "1"
         assert request.extensions["timeout"]["read"] == 2
         return httpx.Response(200, json=[ROW])
 
@@ -38,7 +38,7 @@ async def test_coordinates_attribution_request_identity_and_cache(cache):
     assert len(calls) == 1
     assert (first.lat, first.lon) == (49.1425, 20.0506)
     assert first.osm_url == "https://www.openstreetmap.org/node/123"
-    key, = await cache.keys("gopstop:nominatim:result:v1:*")
+    key, = await cache.keys("gopstop:nominatim:search:v2:*")
     assert 0 < await cache.ttl(key) <= 86400
 
 
@@ -65,7 +65,7 @@ async def test_invalid_geocoding_output_is_not_cached(cache, rows):
     )) as client:
         with pytest.raises(ProviderError):
             await NominatimGeocoder(client, cache, "Trails/1.0").geocode("invalid")
-    assert await cache.keys("gopstop:nominatim:result:v1:*") == []
+    assert await cache.keys("gopstop:nominatim:search:v2:*") == []
 
 
 async def test_shared_gate_waits_until_one_second_after_previous_response(cache):

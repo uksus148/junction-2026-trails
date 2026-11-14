@@ -93,7 +93,7 @@ The fix sends an inline nullable object schema with `name`, `geocodeQuery`,
 tool result still has this shape (names/query must come from supplied evidence):
 
 ```json
-{"place":{"name":"Skok waterfall","geocodeQuery":"Skok waterfall, High Tatras, Slovakia","sourceIndex":0,"tags":["waterfall"]}}
+{"place":{"name":"Skok waterfall","geocodeQuery":"Skok waterfall, Slovakia","sourceIndex":0,"tags":["waterfall"]}}
 ```
 
 After review, deploy the fix, restart the agent and record the tested commit.
@@ -109,3 +109,30 @@ keep raw provider errors/keys out of public reports. The separate ORS no-route r
 for Rysy is tracked in [#49](https://github.com/uksus148/trego./issues/49) and needs
 Murat's investigation. Popradské Pleso is a useful control hike,
 but success there does not complete the required Tatras acceptance.
+
+## Recheck issue #51
+
+#50 fixed Groq resolution; Daniil's live run then lost all three Tatras places in
+Nominatim. Deploy the reviewed geocoding fix and record the new revision. It ignores
+old v1 place/null cache entries, so do not flush shared Valkey. The changed resolver
+prompt also creates a new resolution-cache identity without manual invalidation.
+
+Use `openai/gpt-oss-20b` and repeat the preflight, short chat smoke and Tatras/browser
+checks above. Geocoding an isolated Skok query can validly stay ambiguous: two
+Slovak waterfalls share the name. The complete request can disambiguate using its
+independently resolved start/end points. Verify the selected source really supports
+the object type (lake, settlement, resort, etc.); do not force one type for the demo.
+Check OSM identity and coordinates as well as `stage=geocoding outcome=ok`:
+an ok stage alone can mean an unresolved result.
+
+For the High Tatras waterfall, OSM node `383862401` is at 49.153124, 20.0452686.
+The other Skok (node `10923822165`, longitude 19.656373) must not be silently used.
+These are observed public lookup results, not production overrides. A lake-type
+Štrbské Pleso resolves to way `4816134`; other source-supported types can select
+another appropriate object. Rysy peak is node `1862536196`.
+
+Confirm that genuinely ambiguous places still ask for clarification without writes,
+and repeat a known request to check cache reuse. #49 may still yield a normal no-route
+reply after successful discovery/ingestion; no routeId is correct in that case and
+does not complete E5. Report sanitized status, revision, elapsedMs, selected OSM IDs
+and saved IDs when present. Do not automatically repeat an uncertain route POST.
