@@ -1,0 +1,16 @@
+# Only build inputs enter the context, including when a local .env or JAR exists.
+**
+!Dockerfile
+!.dockerignore
+!pom.xml
+!src/
+!src/main/
+!src/main/**
+
+# Private configuration must not enter source layers either.
+**/.env
+**/.env.*
+**/*.pem
+**/*.key
+**/*.p12
+**/*.jks

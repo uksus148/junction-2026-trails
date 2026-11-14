@@ -201,6 +201,17 @@ submitted `source`, return 400 rather than being silently ignored. See the
   contracts stay unchanged; malformed outputs still fail without writes or retries.
   Fixture checks pass; live Groq resolution and E3/E5 must be rerun before acceptance.
 
+### API container packaging
+
+PR #46 prepares the existing Spring Boot API for container execution; public
+deployment remains a separate gate. Build with `docker build --tag trego-api:local api`.
+A pinned Maven/Java 21 stage produces the JAR, and a pinned Temurin 21 JRE runs it
+as UID/GID 10001. The runtime JAR is root-owned and readable, without write access
+for the application user. Credentials are injected at runtime and the PostgreSQL
+CA is mounted read-only; see [API container](api/CONTAINER.md). The API workflow
+verifies application tests before building the image. Hosting, registry publication
+and agent/frontend packaging still require their own delivery work.
+
 ### Route implementation selected by Murat
 
 Murat selected a provider-neutral `RoutingGateway` with a separate ORS adapter and accepted
