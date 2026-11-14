@@ -108,9 +108,12 @@ The prepared core validates explicit ISO planning dates/months/ranges and asks f
 missing year/scope. It requires opt-in and reviewed host/freshness policy, makes at
 most one fresh Exa search and one tool assessment within the remaining deadline,
 and validates source-bound dates/quotes, freshness and conflicting notices.
+Publication/update roles are checked against literal source metadata, independently
+of model labels. Assessment requires uncapped full-text retrieval within the content
+budget; potentially partial sources remain unconfirmed without another search.
 Typed results preserve the technical failure separately; they make no routing,
 session, SQL or event writes. The normal place-search cache is unchanged; optional
 notices are request-scoped. Free-form dates and notices without literal ISO dates
 remain unconfirmed/clarified in this first slice rather than being inferred.
-Chat wiring, evidence delivery, localized presentation and activation remain open
-owner decisions; preparing this core does not choose between the wire options above.
+Exact chat mapping, localized presentation, production policy and activation still
+need affected-owner review against the selected wire proposal. The core enables no public fields.

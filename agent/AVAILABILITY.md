@@ -3,8 +3,10 @@
 This implements Mukhamed's internal slice of the
 [team plan](../docs/ROUTE_AVAILABILITY_RESEARCH_PLAN.md) after merged #54.
 It is explicitly composed and invoked; `create_chat`, HTTP payloads, startup,
-session records and the reply writer are unchanged. Public trigger, source/date
-presentation and activation still need the affected owners' agreement. No live
+session records and the reply writer are unchanged. Murat selected optional consent,
+planning dates and structured evidence on existing chat in the
+[wire proposal](../docs/ROUTE_AVAILABILITY_CONTRACT.md); exact mapping and activation
+still need the affected owners' agreement. No live
 Groq/Exa acceptance or new automatic research is claimed.
 
 ## Inputs and gates
@@ -34,6 +36,15 @@ paid research. Add `www` separately if approved; subdomains are not implicitly t
 One fresh, domain-filtered Exa search returns at most three sources. It bypasses
 the ordinary 24-hour place cache without reading, overwriting or clearing it.
 This request-scoped exception avoids applying place-cache freshness to notices.
+Notice searches request uncapped full text (`contents.text=true`, without
+`maxCharacters`), as documented by [Exa](https://docs.exa.ai/reference/contents-retrieval).
+Internal `textComplete` provenance requires that mode and, when supplied, one
+successful provider content status. Capped, cached or unknown coverage stays
+unconfirmed regardless of text length. Oversized pages remain incomplete markers;
+the workflow rejects incomplete sources or more than 10,000 total characters before
+assessment, without slicing or dropping a possible exception/revocation.
+This records the provider's full-text contract, not an independent audit of opaque
+provider omissions. Provenance is excluded from normal place-cache/prompt serialization.
 One selected-provider tool call extracts at most three notices; it reuses Groq
 `openai/gpt-oss-20b` or the selected Anthropic transport. All work, including quota
 waits, fits the smaller of the caller's remaining deadline and the internal budget
@@ -44,6 +55,10 @@ Validation requires approved hosts, credential-free standard-port URLs, verbatim
 excerpts, matching section/jurisdiction, publication date and applicability interval.
 All evidence dates must appear literally as ISO dates in their respective excerpts;
 natural-language/annual rules without explicit dates stay unconfirmed in this slice.
+Freshness requires a source-parsed English `Published`, `Publication date`, `Updated`
+or `Last modified` fact at a line/sentence boundary. The publication excerpt must
+include that labelled ISO date; an applicability date cannot substitute for it.
+Unsupported publication formats/roles remain unconfirmed.
 A recent fetch alone does not make an old publication fresh. Truncated, missing,
 stale or future-dated evidence, invented quotes/indices/fields and conflicting
 overlapping notices stay unconfirmed. Model extraction still needs semantic/live
@@ -78,8 +93,10 @@ result = await research.investigate(
 ```
 
 The sample policy is an integration-review example, not an enabled runtime choice.
-Results are internal facts, not a new wire response. Before connecting chat, agree
-how to carry confirmed failure/visits into an explicit investigation, render sources
-and dates, localize questions, and preserve the existing session-save step. The core
+Results are internal facts, not a new wire response. Chat integration must validate/
+clarify dates before ingestion, then invoke research only for a verified failure.
+Review mapping the proposed planningWindow into this core, carrying authoritative
+visits/confirmed scope, rendering sources/dates, localizing questions and preserving
+the existing session-save step. The core
 supplies no routeId and does not retry an earlier route POST. UI/date fields and
 SQL/Kafka remain separate.
