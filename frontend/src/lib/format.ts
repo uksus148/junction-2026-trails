@@ -4,7 +4,7 @@ const MISSING = '—'
 const MINUTES_PER_HOUR = 60
 
 export function formatDistance(km: number): string {
-  if (!Number.isFinite(km)) return MISSING
+  if (!Number.isFinite(km) || km < 0) return MISSING
   return `${Number(km.toFixed(1))} km`
 }
 

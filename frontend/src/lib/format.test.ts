@@ -10,7 +10,8 @@ describe('formatDistance', () => {
     expect(formatDistance(9)).toBe('9 km')
   })
 
-  it('shows a dash for a non-finite distance', () => {
+  it('shows a dash for a negative or non-finite distance', () => {
+    expect(formatDistance(-1)).toBe('—')
     expect(formatDistance(Number.NaN)).toBe('—')
   })
 })
