@@ -69,6 +69,14 @@ new ORS key. Murat verifies that key with a bounded diagnostic miss, without cac
 
 ## Browser and full Tatras acceptance
 
+Measure the required intermediate-stop request after the short smoke:
+```sh
+uv run --frozen python -m gopstop_agent.smoke --chat --message "I want to hike from Štrbské Pleso to Rysy via the Skok waterfall. I love wild scenery." > target/e2e-tatras.json
+```
+Record `elapsedMs`, stage logs and the revision. Serialized Groq calls/quota waits can
+exceed discovery's 90-second budget. Demo activation needs this measurement and suitable
+proxy limits; direct-hike/fixture success is insufficient.
+
 Set `VITE_USE_MOCKS=false`, service URLs and matching CORS; restart Vite.
 Run the runbook's Tatras message and another region. Check track, endpoint/stop sources,
 marker reset, follow-up language/history and clarification clearing old routes.

@@ -5,7 +5,7 @@ import json
 import httpx
 from pydantic import BaseModel, ConfigDict, Field
 
-from gopstop_agent.intent import Message, ProviderError, ProviderTimeout
+from gopstop_agent.intent import Message, ProviderError
 from gopstop_agent.llm import ToolModel
 
 
@@ -44,7 +44,5 @@ class ClaudeReplyWriter:
                 "tool_choice": {"type": "tool", "name": "write_chat_reply"},
             })
             return Reply.model_validate(result).reply
-        except httpx.TimeoutException as exc:
-            raise ProviderTimeout("Reply generation timed out.") from exc
-        except (httpx.HTTPError, ValueError, KeyError, TypeError, AttributeError) as exc:
+        except (ValueError, KeyError, TypeError, AttributeError) as exc:
             raise ProviderError("Reply generation is temporarily unavailable.") from exc

@@ -22,7 +22,8 @@ def request_body():
     return ClaudePlaceResolver(None, "unused", "openai/gpt-oss-20b").request_body("Skok", SOURCES)
 
 
-async def test_groq_sends_forced_function_and_normalizes_only_its_validated_input():
+@pytest.mark.parametrize("finish", ["tool_calls", "stop"])
+async def test_groq_sends_forced_function_and_normalizes_only_its_validated_input(finish):
     def handle(request):
         assert str(request.url) == "https://api.groq.com/openai/v1/chat/completions"
         assert request.headers["Authorization"] == "Bearer fixture-secret"
@@ -34,15 +35,15 @@ async def test_groq_sends_forced_function_and_normalizes_only_its_validated_inpu
         assert body["messages"][0]["role"] == "system"
         assert body["tools"][0]["function"]["parameters"] == request_body()["tools"][0]["input_schema"]
         assert body["tool_choice"] == {"type": "function", "function": {"name": "resolve_place"}}
-        return httpx.Response(200, json=completion())
+        return httpx.Response(200, json=completion(finish=finish))
 
     async with httpx.AsyncClient(transport=httpx.MockTransport(handle)) as client:
         assert await ToolModel(client, "fixture-secret", "groq", .5).call(request_body()) == {"place": PLACE}
 
 
-@pytest.mark.parametrize("bad", [{}, {"choices": []}, completion(finish="length"), completion(name="invented"),
+@pytest.mark.parametrize("bad", [{}, {"choices": []}, completion(finish="length"), completion(name="invented", finish="stop"),
                                  completion(value=[1]), {"choices": completion()["choices"] * 2},
-                                 {"choices": [{"finish_reason": "tool_calls", "message": {"tool_calls": []}}]}])
+                                 {"choices": [{"finish_reason": "stop", "message": {"tool_calls": []}}]}])
 async def test_bad_groq_response_is_a_safe_failure_without_retry(bad):
     calls = []
 

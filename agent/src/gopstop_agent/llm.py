@@ -64,7 +64,7 @@ class ToolModel:
                     self._reset = time.monotonic() + seconds
                 response.raise_for_status()
                 choices = response.json()["choices"]
-                if len(choices) != 1 or choices[0]["finish_reason"] != "tool_calls":
+                if len(choices) != 1 or choices[0]["finish_reason"] not in ("tool_calls", "stop"):
                     raise ProviderError("Model tool generation did not complete.")
                 calls = choices[0]["message"]["tool_calls"]
                 if len(calls) != 1 or calls[0]["type"] != "function" or calls[0]["function"]["name"] != name:

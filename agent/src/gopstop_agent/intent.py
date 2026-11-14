@@ -89,7 +89,5 @@ class ClaudeIntentExtractor:
                                     if any(error["loc"] == location for error in errors))
                 raise IntentClarificationRequired(question) from None
             raise ProviderError("Intent extraction returned invalid data.") from exc
-        except httpx.TimeoutException as exc:
-            raise ProviderTimeout("Intent extraction is temporarily unavailable.") from exc
-        except (httpx.HTTPError, ValueError, KeyError, TypeError, AttributeError) as exc:
+        except (ValueError, KeyError, TypeError, AttributeError) as exc:
             raise ProviderError("Intent extraction is temporarily unavailable.") from exc

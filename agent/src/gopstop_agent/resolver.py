@@ -6,7 +6,7 @@ import httpx
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from gopstop_agent.exa import ResearchSource
-from gopstop_agent.intent import Name, ProviderError, ProviderTimeout
+from gopstop_agent.intent import Name, ProviderError
 from gopstop_agent.llm import ToolModel
 
 
@@ -74,7 +74,5 @@ class ClaudePlaceResolver:
             if result and result.sourceIndex >= min(len(sources), 3):
                 raise ProviderError("Place resolution selected an unknown source.")
             return result
-        except httpx.TimeoutException as exc:
-            raise ProviderTimeout("Place resolution is temporarily unavailable.") from exc
-        except (httpx.HTTPError, ValueError, KeyError, TypeError, AttributeError) as exc:
+        except (ValueError, KeyError, TypeError, AttributeError) as exc:
             raise ProviderError("Place resolution is temporarily unavailable.") from exc
