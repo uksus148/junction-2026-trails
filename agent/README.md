@@ -54,3 +54,16 @@ Set `ANTHROPIC_API_KEY` in the root `.env`. `AGENT_ANTHROPIC_MODEL` follows the
 team-plan default `claude-haiku-5-5`; select a model available to the team's account
 before live testing. `AGENT_PROVIDER_TIMEOUT_SECONDS` defaults to 20. No automatic
 paid retries are performed. Live account/model availability has not been verified.
+
+## Place research providers
+
+`ExaSearch` searches live web text and always preserves each result's URL.
+Valkey caches query hashes for 24 hours. `NominatimGeocoder` resolves descriptive
+names into WGS84 coordinates with stable OSM identifiers, caches responses for
+24 hours, and uses a shared Valkey gate to limit requests to one per second.
+Missing or ambiguous coordinates stay unresolved. Set `EXA_API_KEY` in the root
+`.env` and configure `AGENT_NOMINATIM_USER_AGENT` with the team's contact identity.
+`AGENT_NOMINATIM_BASE_URL` permits switching to a hosted geocoder. Display
+OpenStreetMap attribution when using its coordinates. Photo URLs and licensing
+are not inferred from arbitrary web images. The provider block is wired into
+chat by the next PR; tests use fixtures and make no live requests.

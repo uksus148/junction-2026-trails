@@ -27,3 +27,9 @@ class Settings(BaseSettings):
     anthropic_api_key: SecretStr = Field(default="", validation_alias="ANTHROPIC_API_KEY")
     anthropic_model: str = "claude-haiku-5-5"
     provider_timeout_seconds: float = Field(default=20, gt=0, le=60)
+    exa_api_key: SecretStr = Field(default="", validation_alias="EXA_API_KEY")
+    nominatim_user_agent: str = Field(
+        default="GopstopTrails/0.1 (https://github.com/uksus148/junction-2026-trails)",
+        min_length=8,
+    )
+    nominatim_base_url: str = "https://nominatim.openstreetmap.org"
