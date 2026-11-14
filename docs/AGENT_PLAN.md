@@ -5,6 +5,9 @@ This plan follows [CLAUDE.md](../CLAUDE.md), the
 [repository rules](REPOSITORY_RULES.md). It proposes remaining work; it does not
 approve new endpoints, fields, tables, or Kafka event schemas.
 
+Use the shared [integration runbook](INTEGRATION_RUNBOOK.md) for the cross-service delivery
+ledger, environment prerequisites, diagnostic sequence and actual end-to-end evidence.
+
 ## Current baseline
 
 - PR #20 is merged: FastAPI chat, Valkey sessions, CORS, and storage timeouts.
@@ -25,10 +28,10 @@ approve new endpoints, fields, tables, or Kafka event schemas.
 - PR #34 is merged with both owner approvals. The accepted D1–D5 design is now
   published in CLAUDE.md. #35–#37 frontend follow-ups and #38 branding are merged.
 - PR #39 is merged: persisted ORS hiking routes and readback. The required
-  Valkey cache is the separate #41 follow-up under review.
-- This increment adds the internal API adapter and route handoff with fixture
+  Valkey cache is merged in #41; live Aiven verification remains pending.
+- PR #40 adds the merged internal API adapter and route handoff with fixture
   validation; HTTP chat is still the baseline placeholder. Researched ingestion
-  and the routing cache must be reviewed before live use.
+  and HTTP orchestration remain required before live chat-to-route use.
 - Mukhamed implements the agent; Murat owns the API/storage boundary; Daniil owns
   the frontend/chat boundary. Request both teammates for each agent PR.
 
