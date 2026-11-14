@@ -4,7 +4,7 @@ Use JDK 21 or newer, Maven 3.6.3+ and Docker Compose. The project targets Java 2
 
 ## Code map
 
-The API is one Spring Boot application organized by feature. Start with the feature you are reviewing, then follow its HTTP handler to the model and database query.
+The API is one Spring Boot application organized by feature. Follow a request through its controller, application service, and JPA repository. Persistence entities are separate from the records returned over HTTP.
 
 ```text
 api/
@@ -12,34 +12,50 @@ api/
 ├── src/main/java/io/junction/trails/
 │   ├── TrailsApplication.java
 │   ├── config/
-│   │   └── ApiWebConfiguration.java
+│   │   ├── ApiWebConfiguration.java
+│   │   └── ApiCorsProperties.java
 │   └── places/
 │       ├── web/
-│       │   └── PlaceController.java
+│       │   ├── PlaceController.java
+│       │   └── PlaceExceptionHandler.java
+│       ├── application/
+│       │   └── PlaceService.java
 │       ├── model/
 │       │   ├── BoundingBox.java
-│       │   └── Place.java
+│       │   ├── NewPlace.java
+│       │   ├── Place.java
+│       │   └── InvalidPlaceInputException.java
 │       └── persistence/
-│           └── PlaceRepository.java
+│           ├── PlaceRepository.java
+│           └── PlaceEntity.java
 ├── src/main/resources/
 │   ├── application.properties
 │   └── db/migration/
 │       └── V1__create_places.sql
-└── src/test/java/io/junction/trails/places/web/
-    ├── PlaceSearchTest.java
-    └── PlaceCorsConfigurationTest.java
+└── src/test/java/io/junction/trails/places/
+    ├── model/
+    │   ├── BoundingBoxTest.java
+    │   └── NewPlaceTest.java
+    └── web/
+        ├── PlaceSearchTest.java
+        └── PlaceCorsConfigurationTest.java
 ```
 
 | Package or directory | Responsibility |
 |---|---|
-| `config` | Shared Spring MVC settings, including allowed browser origins |
+| `config` | Shared Spring MVC settings and immutable configuration properties, including allowed browser origins |
 | `places/web` | HTTP parameters, response handling, and HTTP errors |
-| `places/model` | Place data and bounding-box validation, independent of Spring and JDBC |
-| `places/persistence` | Parameterized SQL and mapping database rows to models |
+| `places/application` | Search workflows, transaction boundaries, and entity-to-response mapping |
+| `places/model` | Validated input values and response snapshots, independent of Spring and persistence |
+| `places/persistence` | JPA entities, Spring Data repositories, and parameterized native spatial queries |
 | `resources/db/migration` | Ordered Flyway migrations for the application's database schema |
 | `test/java` | Tests that mirror production packages; the web test covers HTTP through PostGIS |
 
-The dependency direction is `web → persistence → model`, with `web` also using the model directly. Future route and photo features belong in sibling `routes` and `photos` packages. Feature-specific business workflows can live in an `application` subpackage as they are implemented. This keeps route construction, caching, and upload processing close to their owning feature. Spring discovers components below `io.junction.trails`.
+The request flow is `web → application → persistence`; each layer uses model values as needed. The service currently depends on the JPA repository and maps its entities to response records inside the transaction. Controllers never serialize entities. Future route and photo features belong in sibling `routes` and `photos` packages. Spring discovers components below `io.junction.trails`.
+
+Components use Lombok `@RequiredArgsConstructor` with final dependency fields, without `@Autowired` on the single generated constructor. Maven configures the annotation processor explicitly, using the Lombok version managed by Spring Boot; Lombok is excluded from the executable JAR. `ApiWebConfiguration` receives the immutable `ApiCorsProperties` bean. Use Lombok for ordinary accessors and constructors in other Java classes too. `PlaceEntity` uses field-level `@Getter` and a protected `@NoArgsConstructor`; derived coordinates, defensive collection access, and validated initialization remain explicit. Add `@Setter` only for properties intended to support unrestricted assignment. Records already provide their component accessors.
+
+Spring Data JPA handles ordinary persistence. Hibernate Spatial maps the JTS point to the existing PostGIS column, and Hibernate maps tags to PostgreSQL `text[]`. The spatial search stays an explicit native query, including array-overlap filtering. JDBC remains available through Spring's JDBC support for future complex queries that justify a dedicated adapter; no extra query framework is introduced in advance.
 
 ## Start locally
 
@@ -51,7 +67,7 @@ cd api
 mvn spring-boot:run
 ```
 
-Flyway creates the `places` table on first startup. PostGIS and pgvector are enabled by the existing database initialization script. The table starts empty.
+Flyway creates the `places` table on first startup. Hibernate validates the existing schema with `ddl-auto=validate`; it does not create or update tables. Open EntityManager in View is disabled. PostGIS and pgvector are enabled by the existing database initialization script. The table starts empty.
 
 Browser requests to `/api/**` allow `http://localhost:5173` by default. Configure
 `API_CORS_ALLOWED_ORIGINS` in the root `.env` or process environment as a
@@ -64,8 +80,7 @@ API_CORS_ALLOWED_ORIGINS=http://localhost:5173,http://localhost:5174,https://tra
 
 Restart the API after changing origins. CORS permits GET and POST with the
 `Content-Type` header, including browser preflight requests. Other origins and
-methods are rejected. This configures browser access; it does not implement the
-planned POST endpoints or enable credentialed cross-origin requests.
+methods are rejected. Credentialed cross-origin requests are not enabled.
 
 ```sh
 curl 'http://localhost:8080/api/places?bbox=20,49,21,50&tags=waterfall'
@@ -85,16 +100,16 @@ cd api
 mvn verify
 ```
 
-Tests build the existing `infra/postgres` image and start an isolated PostgreSQL 18 container. Flyway applies the migration, and HTTP tests verify filters, boundaries, coordinates, response fields and invalid parameters. Browser-access tests cover GET/POST preflight, successful and invalid search responses, denied origins/methods, and configurable frontend origins. Docker must be running. Tests use disposable credentials and a separate database.
+Tests build the existing `infra/postgres` image and start an isolated PostgreSQL 18 container. Flyway applies the migration and Hibernate validates the entity mapping. HTTP tests verify search, invalid parameters, coordinate order, tag-array mapping, and unexpected server errors. Model tests exercise constructor invariants and collection snapshots. Browser-access tests cover GET/POST preflight, successful and invalid search responses, denied origins/methods, and configurable frontend origins. Docker must be running. JDBC is used in integration tests to seed and independently inspect the database.
 
 The API workflow runs these checks for API, database image, or workflow changes. The workflow can be exercised on GitHub after this local work has been reviewed and published.
 
 ## Review order
 
-1. [PlaceController](src/main/java/io/junction/trails/places/web/PlaceController.java) maps the GET request to the search operation.
-2. [BoundingBox](src/main/java/io/junction/trails/places/model/BoundingBox.java) validates coordinates; [Place](src/main/java/io/junction/trails/places/model/Place.java) defines returned data.
-3. [PlaceRepository](src/main/java/io/junction/trails/places/persistence/PlaceRepository.java) executes the spatial and tag filters.
-4. [V1 migration](src/main/resources/db/migration/V1__create_places.sql) defines the table and indexes.
-5. [PlaceSearchTest](src/test/java/io/junction/trails/places/web/PlaceSearchTest.java) verifies the complete HTTP-to-PostGIS path.
+1. [PlaceController](src/main/java/io/junction/trails/places/web/PlaceController.java) maps GET parameters to the search workflow.
+2. [BoundingBox](src/main/java/io/junction/trails/places/model/BoundingBox.java) and [NewPlace](src/main/java/io/junction/trails/places/model/NewPlace.java) enforce value invariants; [Place](src/main/java/io/junction/trails/places/model/Place.java) defines the response snapshot.
+3. [PlaceService](src/main/java/io/junction/trails/places/application/PlaceService.java) owns the read transaction and entity-to-response mapping.
+4. [PlaceEntity](src/main/java/io/junction/trails/places/persistence/PlaceEntity.java) maps the existing schema; [PlaceRepository](src/main/java/io/junction/trails/places/persistence/PlaceRepository.java) executes native spatial queries through JPA.
+5. [PlaceExceptionHandler](src/main/java/io/junction/trails/places/web/PlaceExceptionHandler.java) maps known input failures to HTTP 400. [PlaceSearchTest](src/test/java/io/junction/trails/places/web/PlaceSearchTest.java) verifies the HTTP-to-PostGIS path.
 
 Maven generates compiled classes, reports, and the application JAR under `target/`. Source changes belong under `src/`.
