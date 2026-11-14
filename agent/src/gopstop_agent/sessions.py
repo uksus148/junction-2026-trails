@@ -4,6 +4,7 @@ import json
 from typing import Protocol
 
 from redis.asyncio import Redis
+from redis.exceptions import RedisError
 
 from gopstop_agent.intent import Message
 
@@ -27,7 +28,15 @@ class ValkeySessionStore:
     async def history(self, session_id: str) -> list[Message]:
         # Six complete exchanges keep token use bounded, independently of retention.
         items = await self._client.lrange(self._key(session_id), -12, -1)
-        return [json.loads(item) for item in items]
+        try:
+            messages = [json.loads(item) for item in items]
+        except (ValueError, TypeError) as exc:
+            raise RedisError("Chat history is invalid.") from exc
+        if any(not isinstance(item, dict) or item.get("role") not in ("user", "assistant")
+               or not isinstance(item.get("content"), str) or not item["content"].strip()
+               or len(item["content"]) > 4000 for item in messages):
+            raise RedisError("Chat history is invalid.")
+        return [{"role": item["role"], "content": item["content"]} for item in messages]
 
     async def record_exchange(self, session_id: str, user_message: str, reply: str) -> None:
         key = self._key(session_id)

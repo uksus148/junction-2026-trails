@@ -7,7 +7,7 @@ import httpx
 from pydantic import BaseModel, Field, HttpUrl, TypeAdapter, ValidationError
 from redis.asyncio import Redis
 
-from gopstop_agent.intent import ProviderError
+from gopstop_agent.intent import ProviderError, ProviderTimeout
 
 
 CACHE_TTL_SECONDS = 86400
@@ -68,6 +68,8 @@ class ExaSearch:
                     break
             if results and not sources:
                 raise ProviderError("Place research returned no usable sources.")
+        except httpx.TimeoutException as exc:
+            raise ProviderTimeout("Place research is temporarily unavailable.") from exc
         except (httpx.HTTPError, ValueError, KeyError, TypeError, AttributeError) as exc:
             raise ProviderError("Place research is temporarily unavailable.") from exc
         await self._redis.set(key, sources_adapter.dump_json(sources), ex=CACHE_TTL_SECONDS)

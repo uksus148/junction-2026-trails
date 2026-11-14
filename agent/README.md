@@ -1,8 +1,8 @@
 # trego. Agent
 
-The FastAPI `POST /api/chat` endpoint validates requests, stores exchanges in Valkey,
-and returns a placeholder. Internal discovery and route handoff are available for
-fixture-tested composition; HTTP orchestration is not enabled yet.
+The FastAPI `POST /api/chat` endpoint composes discovery, persisted route handoff,
+language-aware replies, and Valkey history. Orchestration is opt-in and fixture-tested;
+the default remains the baseline placeholder until the live prerequisites below pass.
 
 ## Run locally
 
@@ -20,7 +20,7 @@ For reproducible installs with uv, run `uv sync --frozen --extra test` instead;
 Settings load from the repository root `.env` and process environment. Set `AGENT_VALKEY_URL` to a Redis-compatible Valkey URL; when it is unset, the service also accepts the shared `SPRING_DATA_REDIS_URL` variable. The default is `redis://localhost:6379/0`. `AGENT_SESSION_TTL_SECONDS` defaults to 86400 (one day), and `AGENT_SESSION_MAX_MESSAGES` defaults to 200 messages per session (must be even so history is retained in complete user/assistant exchanges). Start the API with:
 
 ```sh
-uvicorn gopstop_agent.main:app --reload
+uvicorn gopstop_agent.main:app --reload --log-config logging.json
 ```
 
 Browser calls are allowed from `http://localhost:5173` by default. Set
@@ -45,31 +45,60 @@ Content-Type: application/json
 {"sessionId":"demo-session","message":"I want to hike from Štrbské Pleso to Rysy via Skok waterfall."}
 ```
 
-The response follows the shared contract: `{ "reply": string, "places": [] }`, with `routeId` omitted until a route is available. Invalid payloads return FastAPI's `422` validation response. If Valkey is unavailable, the service returns `503` and does not claim that the message was saved.
+The response follows `{reply, places:[Place], routeId?}`. Only a validated,
+fetchable saved route supplies routeId; clarification has empty places and no ID.
+Invalid payloads return FastAPI's `422`. Storage failures return `503` without
+claiming the exchange was saved.
 
 Run automated tests with `pytest`.
+
+## Enable orchestration after integration preflight
+
+Keep `AGENT_CHAT_ENABLED=false` until researched ingestion (runbook E1) and this
+E2 implementation are reviewed/merged, and E4 confirms actual credentials, model,
+cache and service connectivity. Then set it to `true` in the root `.env` and restart.
+The manual place handler is not a research fallback or capability probe.
+See the [shared runbook](../docs/INTEGRATION_RUNBOOK.md) for the remaining gates.
+
+Enabled startup checks that Claude/Exa keys and the model ID are nonblank; it makes
+no provider requests and cannot prove account/model availability. Managed HTTP and
+Valkey clients close on shutdown or failed startup. `create_app` accepts injected
+clients/service for fixtures; the caller retains ownership of injected resources.
+
+Chat loads the latest six exchanges, discovers places, clarifies incomplete or
+excessive intent without ingestion, or calls the existing route handoff. Claude
+phrases the known outcome in the latest user's language (conversation language
+for a name/link-only follow-up). After generation, store the exchange before 200.
+Only verified no-hiking-route becomes a normal reply. Provider/invalid-response
+failures return 502, storage/cache failures 503, and deadlines 504, with safe detail.
+Failed requests do not record success; already committed API data may survive
+reply/storage failure or cancellation. Never automatically retry uncertain POSTs.
+
+`AGENT_CHAT_TIMEOUT_SECONDS` defaults to 180 (maximum 300) and covers history,
+discovery, handoff, reply generation and session storage. Existing shorter stage
+limits still apply. `logging.json` enables stage elapsed time/outcome logs with a
+random request trace and hashed session label, without message text, keys or raw
+session IDs. These are internal diagnostics, not new public response fields.
 
 ## Intent extraction
 
 `ClaudeIntentExtractor` uses Claude tool use and validates the internal
 `{start, end, mustSee[], preferences[]}` result. It accepts recent session history,
 keeps unknown endpoints null, and never asks the model for coordinates. The
-adapter is tested with HTTP fixtures and is connected to chat in the next
-discovery block. There are no live provider calls in the test suite.
+adapter is connected through opt-in chat. Tests use HTTP fixtures, never live providers.
 
 Blank endpoints become null, and blank list items are removed before validation.
 If the result still exceeds five intermediate stops or twelve preferences,
 `extract()` raises `IntentClarificationRequired` with a user-facing `question`.
-The chat integration must return that question in its normal reply rather than
-reporting a provider outage; valid stops are not silently discarded. Transport,
-HTTP, and malformed-response failures remain `ProviderError`. HTTP chat wiring
-is outside this block, so its current behavior is unchanged.
+Chat phrases that question as a normal reply rather than reporting a provider
+outage; valid stops are not silently discarded. Transport, HTTP, and malformed
+responses remain `ProviderError`; typed `ProviderTimeout` maps to 504.
 
 Set `ANTHROPIC_API_KEY` in the root `.env`. `AGENT_ANTHROPIC_MODEL` follows the
 team-plan default `claude-haiku-5-5`; select a model available to the team's account
 before live testing. Each extractor request has a 20-second timeout by default;
 its `timeout_seconds` argument overrides the supplied HTTP client's timeouts.
-`AGENT_PROVIDER_TIMEOUT_SECONDS` supplies the setting for the later chat wiring.
+`AGENT_PROVIDER_TIMEOUT_SECONDS` supplies the setting for chat adapters.
 No automatic paid retries are performed. Live account/model availability has not
 been verified.
 
@@ -85,8 +114,8 @@ read stops before Exa. A failed cache write propagates after Exa has already
 consumed credits; the adapter does not retry the call. Provider errors are not
 cached or retried, and request timeouts are explicit.
 
-`EXA_API_KEY` loads from the root `.env` as a masked secret. The adapter is not yet
-wired into HTTP chat and does not create API place IDs or infer photo licensing.
+`EXA_API_KEY` loads from the root `.env` as a masked secret. The adapter is used by
+opt-in chat; it does not create API place IDs or infer photo licensing.
 See [the delivery plan](../docs/AGENT_PLAN.md) for the next blocks and the owner
 agreements required before API persistence and route integration.
 
@@ -104,6 +133,8 @@ the selected source with each uniquely geocoded place. `unresolved` and
 `missing_endpoints` support clarification; `ready_for_handoff` is false while any
 required location is missing. Repeated targets reuse work without removing visits.
 `IntentClarificationRequired` propagates before research for over-limit intent.
+Up to three unique candidate chains run concurrently, retaining requested order;
+all unfinished chains are cancelled and joined on failure or cancellation.
 
 Nominatim results, including empty/ambiguous ones, are cached for 24 hours. A
 shared Valkey token gate holds through each request and for one second after it
@@ -113,11 +144,9 @@ identify the team; `AGENT_NOMINATIM_BASE_URL` can select a hosted service. Displ
 the returned OSM attribution when using these coordinates.
 
 This is an internal result, not an API `Place`: it has OSM type/ID and source
-evidence, but no persisted UUID or routeId. The factory does not run at application
-startup yet; HTTP chat behavior is unchanged. The handoff design is accepted;
-researched ingestion and live integration remain implementation/acceptance work. At chat wiring, use the user's message language
-for normal and clarification replies, as agreed with Daniil in PR #28; UI labels
-remain English.
+evidence, but no persisted UUID or routeId. Enabled startup composes the factory;
+researched ingestion and live integration remain prerequisites. Chat replies use
+the user's language as agreed with Daniil in PR #28; UI labels remain English.
 
 ## Persisted route handoff
 
@@ -136,24 +165,24 @@ for display, and OSM attribution. Original discovery evidence is left intact.
 
 Only a complete 422 Problem Detail with `code: "no_hiking_route"` raises
 `NoHikingRoute` for a normal chat reply. Other failures raise safe `HandoffError`
-with a future HTTP status of 502/503/504 and no remote body. Neither POST retries
+with an HTTP status of 502/503/504 and no remote body. Neither POST retries
 nor redirects are followed; lost responses/deadlines may leave saved data behind.
 There is no cross-service rollback or generated fallback route.
 
 Root settings: `AGENT_API_BASE_URL` defaults to `http://localhost:8080`;
 `AGENT_API_TIMEOUT_SECONDS` defaults to 20 seconds per API call and
 `AGENT_HANDOFF_TIMEOUT_SECONDS` to 60 seconds for ingestion/create/readback together.
-This internal deadline does not replace a future total chat deadline covering
-discovery, handoff, and session storage.
+This internal deadline runs within the total chat deadline described above.
 
-The factory is not wired into HTTP chat. Routes are merged in #39; place
+The factory is composed by opt-in chat. Routes/cache are merged in #39/#41; place
 creation is still manual-only. Its ignored provenance/server-owned manual source
 is rejected by this client. That rejection cannot undo an already committed place. Enable live use
 only after researched ingestion and the required routing cache are reviewed;
 this client is not a capability probe. Tests use HTTP fixtures, including repeats,
 direct hikes, first-write replay, incomplete intent, provider/storage failures,
-malformed responses, possible partial writes, and cancellation. Live API/ORS,
-locale-aware replies, and the frontend route flow remain acceptance work.
+malformed responses, possible partial writes, and cancellation. HTTP chat tests
+cover language/history, saved-route publication, failures, and every deadline stage.
+Live API/ORS, actual model language behavior, and the browser flow remain unverified.
 
 Before photos are enabled, agree the API/agent policy for incomplete attribution
 or invalid photo URLs. The current strict photo model rejects an invalid photo

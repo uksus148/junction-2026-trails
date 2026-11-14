@@ -3,7 +3,7 @@
 This is the shared execution and diagnostic guide for Murat, Mukhamed, and Daniil.
 Read it before changing a service boundary, preparing an integration environment,
 or reporting an end-to-end result. Last checked: November 14, 2026, against
-`main` at `5683f9f` (merged #39, #40, and #41).
+`main` at `d4c91e9` (through merged #42), plus the E2 implementation under review.
 
 ## Authority and keeping the team aligned
 
@@ -36,7 +36,7 @@ Replace pending evidence with a PR/run link and tested revision; retain useful h
 | B3 | Discovery and internal API handoff | Mukhamed | Merged internally | #31, #40; fixtures do not enable HTTP chat |
 | B4 | Frontend route/source/error compatibility | Daniil | Merged | #35-#37; live browser acceptance pending |
 | E1 | Researched place ingestion and OSM deduplication | Murat | Not implemented | Blocks actual agent-to-API ingestion |
-| E2 | HTTP chat orchestration and total deadline | Mukhamed | Not implemented | Current chat still returns a placeholder; depends on E1 for live use |
+| E2 | HTTP chat orchestration and total deadline | Mukhamed | Prepared; awaiting review/merge | [#43](https://github.com/uksus148/trego./pull/43), tested `7b78c43`: 172 agent fixture tests pass; default disabled, E1/E4 block live use |
 | E3 | Real-service frontend verification | Daniil | Pending | Disable mocks; verify direct/chat routes, sources, markers and errors |
 | E4 | Integration environment and credentials | Murat coordinates; all owners verify clients | Unverified | Record selected host, service targets and successful connections privately |
 | E5 | Full Tatras workflow | All three | Not run | Complete the acceptance matrix below on a recorded revision |
@@ -67,7 +67,7 @@ Wire the existing factories and adapters into chat with managed HTTP/Valkey reso
 
 ```text
 load recent history -> discover -> clarify OR persist handoff
-                    -> record the exchange -> return reply, places, routeId?
+                    -> phrase reply -> record exchange -> return reply, places, routeId?
 ```
 
 Incomplete discovery produces a normal clarification without partial ingestion or
@@ -81,6 +81,13 @@ exchange. Session-storage failure after route creation returns 503; saved data m
 No automatic provider or API POST retries. Add one total chat deadline covering discovery,
 handoff and session storage. Retain fixture injection for tests; verify live keys/model
 availability before enabling live orchestration. Request Murat and Daniil for their boundaries.
+
+The E2 branch implements this flow with injected HTTP fixtures and managed clients.
+It also bounds discovery to three concurrent candidate chains, joins cancelled work,
+and retains the shared Nominatim gate. `AGENT_CHAT_ENABLED=false` preserves baseline
+behavior; setting it true validates nonblank keys/model at startup, not their live access.
+The 180-second total deadline includes history and reply generation as well as the
+stages above. No public fields, API schemas or Kafka events change.
 
 ### E3: Daniil - browser integration
 
@@ -136,6 +143,8 @@ secret examples. The table below is a configuration checklist, not a file contai
 | `AGENT_ANTHROPIC_MODEL` | Account-verified model ID; current default has no live verification |
 | `AGENT_NOMINATIM_USER_AGENT` | Existing identifying team value; Mukhamed |
 | `AGENT_API_BASE_URL` | `http://localhost:8080` |
+| `AGENT_CHAT_ENABLED` | Default `false`; enable only after reviewed/merged E1/E2 and successful E4 preflight |
+| `AGENT_CHAT_TIMEOUT_SECONDS` | E2 adds default `180`, maximum `300`; includes history through session save |
 | `VITE_API_BASE_URL`, `VITE_AGENT_BASE_URL` | `http://localhost:8080`, `http://localhost:8000` |
 | `VITE_USE_MOCKS` | `false`; restart Vite after changing |
 | `API_CORS_ALLOWED_ORIGINS` | `http://localhost:5173`, unquoted comma-separated origins |
@@ -163,16 +172,16 @@ and persistence overhead. Review this budget before live activation:
 | `AGENT_API_TIMEOUT_SECONDS` | 20 | 30 | Supported setting; proposal, not applied |
 | `AGENT_DISCOVERY_TIMEOUT_SECONDS` | 60 | 90 | Supported setting; proposal, not applied |
 | `AGENT_HANDOFF_TIMEOUT_SECONDS` | 60 | 60 | Existing supported setting |
-| `AGENT_CHAT_TIMEOUT_SECONDS` | Does not exist | 180 | Requires E2 implementation and owner review; setting it now has no effect |
+| `AGENT_CHAT_TIMEOUT_SECONDS` | E2 adds 180 | 180 | Implemented in the E2 branch; requires this PR's review/merge |
 
 Murat/Mukhamed confirm provider, database/cache and total budgets; Daniil verifies browser
-behavior. If hosted later, confirm proxy limits too. This documentation PR changes no timeout
-defaults, environment template, feature switch, or runtime behavior.
+behavior. If hosted later, confirm proxy limits too. E2 adds the chat budget/switch
+to the root example; existing API/discovery/handoff defaults remain unchanged.
 
 ## Startup and preflight
 
 Start from the recorded main revision with the profile configured. The following are run
-instructions, not evidence that missing E1/E2 code exists. Use separate terminals, each
+instructions, not evidence of E1 completion or live acceptance. Use separate terminals, each
 initially at repository root; service-directory working paths matter for configuration loading.
 
 ```sh
@@ -183,7 +192,7 @@ mvn spring-boot:run
 ```sh
 cd agent
 uv sync --frozen --extra test
-uv run --frozen uvicorn gopstop_agent.main:app --host 127.0.0.1 --port 8000
+uv run --frozen uvicorn gopstop_agent.main:app --host 127.0.0.1 --port 8000 --log-config logging.json
 ```
 
 ```sh
@@ -199,6 +208,8 @@ and mistake it for the Aiven target.
 Before sending paid/live requests, verify service startup, database migrations, authenticated
 cache access/TTL, required provider keys/model access, and exact browser CORS origins. A
 reachable agent OpenAPI page proves HTTP startup, not discovery or route readiness.
+Leave the chat switch false during initial startup; after reviewed E1/E2 and the
+preflight, enable it and restart before acceptance steps that exercise chat.
 
 ## Acceptance matrix
 
@@ -241,6 +252,16 @@ automatically replay an uncertain POST. Previously committed data may survive a 
 Record internal stages consistently: history, intent, research, geocoding, ingestion,
 routing/cache, route readback, session save, and frontend route load. Correlate them with the
 test session/timestamps and returned IDs without adding a required public header or API field.
+With E2's logging configuration, the agent emits `trace`, hashed `session`, `stage`,
+`elapsed_ms` and `outcome` (success or exception class), never provider bodies,
+message text, credentials or raw session IDs. `routing_cache` times the API route
+POST; use API evidence to distinguish an actual cache hit from a provider call.
+
+E2 fixture evidence: `cd agent && uv run --frozen pytest -q` passes 172 tests.
+The HTTP test exercises actual discovery/handoff factories, sourced API records,
+saved-route readback, follow-up history, clarification/no-route, safe errors and
+cancellation at every chat stage. No paid calls, live Aiven or browser acceptance
+were run; this evidence does not complete E1, E3, E4 or E5.
 
 E5 is complete only with reviewed E1/E2, a real fetchable route displayed in the browser,
 retained research sources, a stored successful exchange, and evidence from the selected live
