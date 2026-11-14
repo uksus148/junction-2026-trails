@@ -29,6 +29,9 @@ class Settings(BaseSettings):
     anthropic_model: str = "claude-haiku-5-5"
     provider_timeout_seconds: float = Field(default=20, gt=0, le=60)
     discovery_timeout_seconds: float = Field(default=60, gt=0, le=180)
+    api_base_url: HttpUrl = "http://localhost:8080"
+    api_timeout_seconds: float = Field(default=20, gt=0, le=120)
+    handoff_timeout_seconds: float = Field(default=60, gt=0, le=180)
     nominatim_base_url: HttpUrl = "https://nominatim.openstreetmap.org"
     nominatim_user_agent: str = Field(
         default="trego/0.1 (https://github.com/uksus148/trego)",
