@@ -75,10 +75,41 @@ async def test_http_factories_preserve_sources_history_and_saved_route_with_safe
                   and json.loads(r.content).get("tool_choice", {}).get("name") == "extract_route_intent"]
     assert extraction[1]["messages"][:-1] == stored[:2]
     assert sum(r.url.host == "api.exa.ai" for r in provider_calls) == 3  # Cached on follow-up.
+    resolution = [r for r in provider_calls if r.content
+                  and json.loads(r.content).get("tool_choice", {}).get("name") == "resolve_place"]
+    assert len(resolution) == 3  # Intent and reply remain per-message; resolution is reused.
     for stage in ("history", "intent", "research", "resolution", "geocoding", "ingestion",
                   "routing_cache", "route_readback", "reply", "session_save"):
         assert f"stage={stage}" in caplog.text
     assert "private-session" not in caplog.text and "fixture-claude-secret" not in caplog.text
+
+
+@pytest.mark.parametrize("operation", ["get", "set"])
+async def test_resolution_cache_failure_returns_safe_503_without_ingestion_or_exchange(build_app, monkeypatch, operation):
+    api, calls = ApiFixture(), []
+    providers = provider_fixture({"start": "Skok", "end": "Skok"},
+                                 {"Skok": ("Skok", [row(1, "Skok", 49.14, 20.05)])}, calls)
+
+    def handle(request):
+        return api(request) if request.url.host == "api.example" else providers(request)
+
+    app, cache, _ = build_app(handle)
+    original = getattr(cache, operation)
+
+    async def fail_resolution_cache(key, *args, **kwargs):
+        if key.startswith("gopstop:place-resolution:"):
+            raise RedisError("private cache credentials")
+        return await original(key, *args, **kwargs)
+
+    monkeypatch.setattr(cache, operation, fail_resolution_cache)
+    with TestClient(app) as client:
+        response = client.post("/api/chat", json={"sessionId": "cache-failure", "message": "Find Skok"})
+    assert response.status_code == 503 and "private" not in response.text
+    assert response.json() == {"detail": "Place research cache is temporarily unavailable."}
+    assert api.calls == [] and await cache.llen("gopstop:chat-session:cache-failure") == 0
+    resolution = [r for r in calls if r.content
+                  and json.loads(r.content).get("tool_choice", {}).get("name") == "resolve_place"]
+    assert len(resolution) == (0 if operation == "get" else 1)
 
 
 def service_for(finding=None, extraction_error=None, handoff_error=None):

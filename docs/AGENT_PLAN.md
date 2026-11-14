@@ -30,10 +30,12 @@ ledger, environment prerequisites, diagnostic sequence and actual end-to-end evi
 - PR #39 is merged: persisted ORS hiking routes and readback. The required
   Valkey cache is merged in #41; live Aiven verification remains pending.
 - PR #40 adds the merged internal API adapter and route handoff with fixture
-  validation. Runbook E2 is prepared in this PR: opt-in HTTP orchestration,
-  language-aware replies, history, bounded concurrency, stage logs and total deadline.
-  All 172 agent fixture tests pass. Default chat remains disabled; E1 researched
-  ingestion, E2 review/merge and E4 preflight are required before live activation.
+  validation. #43 merged runbook E2 after both owner approvals: opt-in HTTP chat,
+  language-aware replies, history, bounded concurrency, stage logs and total deadline;
+  172 fixture tests passed. E1 researched ingestion and E4 preflight still gate activation.
+- Independent follow-up prepared in this PR: reuse source-grounded Claude resolution
+  for 24 hours by full effective-request hash. All 202 agent fixture tests pass,
+  including cache invalidation/failures and unchanged HTTP chat. Live latency is unmeasured.
 - Mukhamed implements the agent; Murat owns the API/storage boundary; Daniil owns
   the frontend/chat boundary. Request both teammates for each agent PR.
 
@@ -51,7 +53,7 @@ against current contracts. Closed PRs #23–#25 are references, not a merge queu
 | 1 | Exa text research and Valkey caching, merged in #28 and #31 | Sources retain URLs; repeated queries use a 24-hour cache; mixed-result resilience is tested |
 | 2 | Source-grounded resolution, Nominatim, and internal discovery, merged in #31 | A request yields ordered sourced findings with unique WGS84 coordinates and attribution; ambiguous/missing places stay unresolved; shared rate limits, caching, and overall deadlines are tested |
 | 3 | API ingestion and route handoff agreement, accepted in #34 | Owner approvals are linked and D1–D5 decisions/examples are published in CLAUDE.md |
-| 4 | Chat-to-route orchestration; HTTP E2 prepared, default disabled | Review/merge E2 and API E1, then verify persisted routes in the real frontend (E3-E5) |
+| 4 | Chat-to-route orchestration; HTTP E2 merged in #43, default disabled | Review/merge API E1, then verify persisted routes in the real frontend (E3-E5) |
 | 5 | Licensed photos along the hike | Each displayed photo has author, license, sourceUrl, and coordinates; routes/photos follow the existing units and segment shapes |
 | 6 | Gemini embeddings and pgvector ranking | Model/dimension and Flyway schema are agreed; preferences rank places/captions; repeated indexing is idempotent |
 | 7 | Kafka upload processing and EXIF | photo.uploaded payload/storage access are agreed; consumer handles missing EXIF, duplicates, retries, and nearby trail association |
@@ -75,7 +77,7 @@ These questions need the affected owners' answers, not unilateral agent changes:
   validates the full created Route, then GETs the saved route before success.
   Only a complete 422 `no_hiking_route` problem is a normal no-route outcome;
   dependency failures remain errors. E2 composes these adapters with language-aware
-  replies, session handling and a 180-second overall deadline; review remains required.
+  replies, session handling and a 180-second overall deadline; merged after both reviews.
 - **Photos and vectors: Murat + Mukhamed.** Agree entity keys, source metadata,
   caption storage, Gemini model, output dimension, and upsert semantics before
   Flyway migrations or vector writes. Do not infer an image license from a search
