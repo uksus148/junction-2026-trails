@@ -27,3 +27,5 @@ jobs:
       - name: Build and test against PostGIS
         working-directory: api
         run: mvn --batch-mode --no-transfer-progress verify
+      - name: Build API container
+        run: docker build --tag trego-api:ci api
