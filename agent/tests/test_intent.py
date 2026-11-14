@@ -21,12 +21,13 @@ async def test_extracts_tatras_intent_and_sends_history():
         captured.append(json.loads(request.content))
         assert request.headers["x-api-key"] == "fixture-key"
         assert request.url == "https://api.anthropic.com/v1/messages"
+        assert request.extensions["timeout"]["read"] == 0.5
         return httpx.Response(200, json=tool_response(intent))
 
     history = [{"role": "user", "content": "Hike from Štrbské Pleso to Rysy"},
                {"role": "assistant", "content": "Any places to visit?"}]
     async with httpx.AsyncClient(transport=httpx.MockTransport(handle)) as client:
-        parsed = await ClaudeIntentExtractor(client, "fixture-key", "fixture-model").extract(
+        parsed = await ClaudeIntentExtractor(client, "fixture-key", "fixture-model", timeout_seconds=0.5).extract(
             "Via Skok waterfall, I love wild scenery", history,
         )
     assert parsed.model_dump() == intent
@@ -45,8 +46,14 @@ async def test_unknown_endpoints_remain_unknown():
 
 
 @pytest.mark.parametrize("body", [
+    None, [],
     {}, {"stop_reason": "max_tokens", "content": []},
     {"stop_reason": "tool_use", "content": []},
+    {"stop_reason": "tool_use", "content": [None]},
+    {"stop_reason": "tool_use", "content": [
+        {"type": "tool_use", "name": "extract_route_intent", "input": {}},
+        {"type": "tool_use", "name": "extract_route_intent", "input": {}},
+    ]},
     tool_response({"start": {"lat": 49, "lon": 20}}),
     tool_response({"end": " "}), tool_response({"mustSee": ["x"] * 6}),
     tool_response({"preferences": "scenery"}), tool_response({"invented": True}),
@@ -67,3 +74,26 @@ async def test_upstream_errors_do_not_expose_provider_details(code):
         with pytest.raises(ProviderError, match="temporarily unavailable") as error:
             await ClaudeIntentExtractor(client, "fixture", "model").extract("test", [])
     assert "sensitive" not in str(error.value)
+
+
+@pytest.mark.parametrize("failure", [httpx.ReadTimeout, httpx.ConnectError])
+async def test_network_failures_become_provider_errors_without_retries(failure):
+    requests = []
+
+    def fail(request):
+        requests.append(request)
+        raise failure("private network details", request=request)
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(fail)) as client:
+        with pytest.raises(ProviderError, match="temporarily unavailable") as error:
+            await ClaudeIntentExtractor(client, "fixture", "model").extract("Find Skok", [])
+    assert len(requests) == 1
+    assert "private" not in str(error.value)
+
+
+async def test_non_json_provider_response_is_rejected():
+    async with httpx.AsyncClient(transport=httpx.MockTransport(
+        lambda _: httpx.Response(200, text="upstream gateway returned HTML"),
+    )) as client:
+        with pytest.raises(ProviderError):
+            await ClaudeIntentExtractor(client, "fixture", "model").extract("Find Skok", [])

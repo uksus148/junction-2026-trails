@@ -3,7 +3,7 @@
 from typing import Annotated, Literal, TypedDict
 
 import httpx
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
 
 class ProviderError(Exception):
@@ -28,14 +28,17 @@ class RouteIntent(BaseModel):
 
 
 class ClaudeIntentExtractor:
-    def __init__(self, client: httpx.AsyncClient, api_key: str, model: str) -> None:
+    def __init__(self, client: httpx.AsyncClient, api_key: str, model: str,
+                 timeout_seconds: float = 20) -> None:
         self._client, self._api_key, self._model = client, api_key, model
+        self._timeout = httpx.Timeout(timeout_seconds)
 
     async def extract(self, message: str, history: list[Message]) -> RouteIntent:
         try:
             response = await self._client.post(
                 "https://api.anthropic.com/v1/messages",
                 headers={"x-api-key": self._api_key, "anthropic-version": "2023-06-01"},
+                timeout=self._timeout,
                 json={
                     "model": self._model,
                     "max_tokens": 1024,
@@ -66,5 +69,5 @@ class ClaudeIntentExtractor:
             if len(calls) != 1:
                 raise ProviderError("Expected exactly one intent.")
             return RouteIntent.model_validate(calls[0]["input"])
-        except (httpx.HTTPError, ValueError, KeyError, TypeError, AttributeError, ValidationError) as exc:
+        except (httpx.HTTPError, ValueError, KeyError, TypeError, AttributeError) as exc:
             raise ProviderError("Intent extraction is temporarily unavailable.") from exc

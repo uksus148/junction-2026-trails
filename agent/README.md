@@ -57,5 +57,8 @@ discovery block. There are no live provider calls in the test suite.
 
 Set `ANTHROPIC_API_KEY` in the root `.env`. `AGENT_ANTHROPIC_MODEL` follows the
 team-plan default `claude-haiku-5-5`; select a model available to the team's account
-before live testing. `AGENT_PROVIDER_TIMEOUT_SECONDS` defaults to 20. No automatic
-paid retries are performed. Live account/model availability has not been verified.
+before live testing. Each extractor request has a 20-second timeout by default;
+its `timeout_seconds` argument overrides the supplied HTTP client's timeouts.
+`AGENT_PROVIDER_TIMEOUT_SECONDS` supplies the setting for the later chat wiring.
+No automatic paid retries are performed. Live account/model availability has not
+been verified.
