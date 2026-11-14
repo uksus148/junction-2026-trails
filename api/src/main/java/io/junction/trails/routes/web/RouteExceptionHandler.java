@@ -21,7 +21,7 @@ class RouteExceptionHandler {
     ProblemDetail routeFailure(RouteException exception) {
         HttpStatus status = switch (exception.getReason()) {
             case INVALID_REQUEST -> HttpStatus.BAD_REQUEST;
-            case UNKNOWN_PLACE, NO_HIKING_ROUTE -> HttpStatus.UNPROCESSABLE_ENTITY;
+            case UNKNOWN_PLACE, NO_HIKING_ROUTE, WAYPOINT_NOT_ROUTABLE -> HttpStatus.UNPROCESSABLE_ENTITY;
             case ROUTING_PROVIDER_ERROR -> HttpStatus.BAD_GATEWAY;
             case STORAGE_UNAVAILABLE, CACHE_UNAVAILABLE -> HttpStatus.SERVICE_UNAVAILABLE;
             case ROUTING_TIMEOUT -> HttpStatus.GATEWAY_TIMEOUT;

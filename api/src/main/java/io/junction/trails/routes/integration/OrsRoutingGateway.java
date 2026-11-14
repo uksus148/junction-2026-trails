@@ -50,11 +50,7 @@ public class OrsRoutingGateway implements RoutingGateway {
             if (deadlineExceeded(started)) {
                 throw timeout();
             }
-            if (isNoRoute(exception)) {
-                throw new RouteException(RouteException.Reason.NO_HIKING_ROUTE,
-                        "No walking route connects the requested waypoints.");
-            }
-            throw providerError();
+            throw routeFailure(exception);
         } catch (RestClientException exception) {
             if (deadlineExceeded(started)) {
                 throw timeout();
@@ -109,17 +105,27 @@ public class OrsRoutingGateway implements RoutingGateway {
         return value.doubleValue();
     }
 
-    private static boolean isNoRoute(RestClientResponseException exception) {
+    private static RouteException routeFailure(RestClientResponseException exception) {
         int status = exception.getStatusCode().value();
         if (status != 400 && status != 404) {
-            return false;
+            return providerError();
         }
         try {
             JsonNode body = exception.getResponseBodyAs(JsonNode.class);
             JsonNode code = body == null ? null : body.path("error").path("code");
-            return code != null && code.isIntegralNumber() && (code.intValue() == 2009 || code.intValue() == 2010);
+            if (code == null || !code.isIntegralNumber() || !code.canConvertToInt()) {
+                return providerError();
+            }
+            return switch (code.intValue()) {
+                case 2009 -> new RouteException(RouteException.Reason.NO_HIKING_ROUTE,
+                        "No walking route connects the requested waypoints.");
+                case 2010 -> new RouteException(RouteException.Reason.WAYPOINT_NOT_ROUTABLE,
+                        "One or more waypoints could not be matched to the available hiking network "
+                                + "within the provider's search radius.");
+                default -> providerError();
+            };
         } catch (RestClientException exceptionReadingBody) {
-            return false;
+            return providerError();
         }
     }
 

@@ -14,6 +14,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -53,7 +54,7 @@ class OrsRoutingGatewayTest {
                 .andExpect(header(HttpHeaders.AUTHORIZATION, "fixture-key"))
                 .andExpect(content().json("""
                         {"coordinates":[[20.0,49.0],[20.2,49.2]],"elevation":true,"instructions":false,"units":"m"}
-                        """))
+                        """, true))
                 .andRespond(withSuccess(new ClassPathResource("ors/route.geojson"),
                         MediaType.parseMediaType("application/geo+json")));
         var track = gateway.route(QUERY);
@@ -65,11 +66,35 @@ class OrsRoutingGatewayTest {
     }
 
     @ParameterizedTest
-    @ValueSource(ints = {2009, 2010})
-    void recognizesOnlyExplicitNoRouteResults(int code) {
+    @CsvSource({"400,2009,NO_HIKING_ROUTE", "404,2009,NO_HIKING_ROUTE",
+            "400,2010,WAYPOINT_NOT_ROUTABLE", "404,2010,WAYPOINT_NOT_ROUTABLE"})
+    void distinguishesDisconnectedLocationsFromAnUnmatchedWaypoint(int status, int code, String reason) {
+        server.expect(requestTo(URL)).andRespond(withStatus(HttpStatusCode.valueOf(status))
+                .contentType(MediaType.APPLICATION_JSON).body("{\"error\":{\"code\":" + code + "}}"));
+        assertReason(RouteException.Reason.valueOf(reason));
+        server.verify();
+    }
+
+    @Test
+    void doesNotInferAClosureOrExposeProviderTextFromAPointNotFound() {
+        server.expect(requestTo(URL)).andRespond(withStatus(HttpStatusCode.valueOf(404))
+                .contentType(MediaType.APPLICATION_JSON).body("""
+                        {"error":{"code":2010,"message":"secret: trail closed; increase radius to -1"}}
+                        """));
+        assertThatThrownBy(() -> gateway.route(QUERY)).isInstanceOfSatisfying(RouteException.class, error -> {
+            assertThat(error.getReason()).isEqualTo(RouteException.Reason.WAYPOINT_NOT_ROUTABLE);
+            assertThat(error.getMessage()).contains("hiking network", "search radius")
+                    .doesNotContain("closed", "season", "difficulty", "secret", "-1");
+        });
+        server.verify();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"\"2010\"", "2010.0", "4294969306", "null"})
+    void rejectsUnverifiedErrorCodesInsteadOfCoercingThem(String code) {
         server.expect(requestTo(URL)).andRespond(withStatus(HttpStatusCode.valueOf(404))
                 .contentType(MediaType.APPLICATION_JSON).body("{\"error\":{\"code\":" + code + "}}"));
-        assertReason(RouteException.Reason.NO_HIKING_ROUTE);
+        assertReason(RouteException.Reason.ROUTING_PROVIDER_ERROR);
         server.verify();
     }
 
@@ -82,10 +107,11 @@ class OrsRoutingGatewayTest {
         server.verify();
     }
 
-    @Test
-    void doesNotTrustNoRouteCodesOnServerFailures() {
+    @ParameterizedTest
+    @ValueSource(ints = {2009, 2010})
+    void doesNotTrustRoutingProblemCodesOnServerFailures(int code) {
         server.expect(requestTo(URL)).andRespond(withStatus(HttpStatusCode.valueOf(500))
-                .contentType(MediaType.APPLICATION_JSON).body("{\"error\":{\"code\":2009}}"));
+                .contentType(MediaType.APPLICATION_JSON).body("{\"error\":{\"code\":" + code + "}}"));
         assertReason(RouteException.Reason.ROUTING_PROVIDER_ERROR);
         server.verify();
     }
