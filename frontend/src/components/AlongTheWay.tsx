@@ -1,3 +1,4 @@
+import { routeHasPhotos } from '../lib/routes'
 import type { Photo, Route } from '../types'
 
 interface AlongTheWayProps {
@@ -10,6 +11,8 @@ interface AlongTheWayProps {
 const PHOTOS_PER_SEGMENT = 4
 
 export function AlongTheWay({ route, selectedSegment, onSelectSegment, onOpenPhoto }: AlongTheWayProps) {
+  // A strip of "No photos for this part yet" placeholders adds nothing, so show it only once there is a photo to see.
+  if (!routeHasPhotos(route)) return null
   return (
     <section className="pointer-events-none absolute inset-x-0 bottom-0 p-3 md:p-4" aria-label="What you will see along the way">
       <div className="pointer-events-auto rounded-2xl bg-paper/95 p-3 shadow-xl ring-1 ring-line backdrop-blur">
