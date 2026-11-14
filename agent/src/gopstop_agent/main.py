@@ -4,9 +4,12 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI, HTTPException, Request, status
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from redis.asyncio import Redis, from_url
+from redis.backoff import NoBackoff
 from redis.exceptions import RedisError
+from redis.retry import Retry
 
 from gopstop_agent.config import Settings
 from gopstop_agent.sessions import SessionStore, ValkeySessionStore
@@ -44,7 +47,13 @@ def create_app(
         client = (
             redis_client
             if redis_client is not None
-            else from_url(str(configured.valkey_url), decode_responses=True)
+            else from_url(
+                str(configured.valkey_url),
+                decode_responses=True,
+                socket_connect_timeout=configured.valkey_connect_timeout_seconds,
+                socket_timeout=configured.valkey_socket_timeout_seconds,
+                retry=Retry(NoBackoff(), 0),
+            )
         )
         app.state.session_store = ValkeySessionStore(
             client,
@@ -58,6 +67,12 @@ def create_app(
                 await client.aclose()
 
     app = FastAPI(title="GOPSTOP.PROTOCOL Agent", version="0.1.0", lifespan=lifespan)
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=configured.cors_origins,
+        allow_methods=["POST"],
+        allow_headers=["Content-Type"],
+    )
 
     def get_session_store(request: Request) -> SessionStore:
         return request.app.state.session_store

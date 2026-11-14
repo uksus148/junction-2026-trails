@@ -18,6 +18,14 @@ Settings load from the repository root `.env` and process environment. Set `AGEN
 uvicorn gopstop_agent.main:app --reload
 ```
 
+Browser calls are allowed from `http://localhost:5173` by default. Set
+`AGENT_CORS_ORIGINS` to a JSON list of frontend origins for deployment, for example
+`["https://trails.example.org"]`. Only POST and the Content-Type request header are
+allowed. Valkey connection and read/write timeouts default to two seconds each;
+configure `AGENT_VALKEY_CONNECT_TIMEOUT_SECONDS` and
+`AGENT_VALKEY_SOCKET_TIMEOUT_SECONDS` to change them. Timeouts return the same 503
+as connection failures. These settings are listed in the root `.env.example`.
+
 ## Chat contract
 
 ```http

@@ -11,6 +11,7 @@ class Settings(BaseSettings):
         env_prefix="AGENT_",
         env_file=Path(__file__).resolve().parents[3] / ".env",
         extra="ignore",
+        populate_by_name=True,
     )
 
     valkey_url: RedisDsn = Field(
@@ -20,3 +21,6 @@ class Settings(BaseSettings):
     )
     session_ttl_seconds: int = Field(default=60 * 60 * 24, ge=60, le=60 * 60 * 24 * 30)
     session_max_messages: int = Field(default=200, ge=2, le=10_000, multiple_of=2)
+    valkey_connect_timeout_seconds: float = Field(default=2, gt=0, le=30)
+    valkey_socket_timeout_seconds: float = Field(default=2, gt=0, le=30)
+    cors_origins: list[str] = ["http://localhost:5173"]

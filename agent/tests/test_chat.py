@@ -3,7 +3,7 @@ import json
 import fakeredis.aioredis
 import pytest
 from fastapi.testclient import TestClient
-from redis.exceptions import RedisError
+from redis.exceptions import RedisError, TimeoutError
 
 from gopstop_agent.config import Settings
 from gopstop_agent.main import create_app
@@ -69,11 +69,12 @@ def test_chat_rejects_invalid_input(client, payload):
     assert response.status_code == 422
 
 
-def test_chat_reports_storage_failure_as_service_unavailable(fake_redis):
+@pytest.mark.parametrize("failure", [RedisError("connection failed"), TimeoutError("timed out")])
+def test_chat_reports_storage_failure_as_service_unavailable(fake_redis, failure):
     app = create_app(Settings(), redis_client=fake_redis)
     with TestClient(app) as client:
         async def fail_exchange(*args, **kwargs):
-            raise RedisError("connection failed")
+            raise failure
 
         app.state.session_store.record_exchange = fail_exchange
         response = client.post("/api/chat", json={"sessionId": "s", "message": "hello"})
@@ -96,3 +97,50 @@ async def test_session_store_refreshes_expiry_and_caps_history(fake_redis):
         {"role": "assistant", "content": "reply two"},
     ]
     assert 0 < await fake_redis.ttl("gopstop:chat-session:bounded") <= 600
+
+
+def test_browser_preflight_and_post_have_cors_headers(client):
+    origin = "http://localhost:5173"
+    preflight = client.options("/api/chat", headers={
+        "Origin": origin,
+        "Access-Control-Request-Method": "POST",
+        "Access-Control-Request-Headers": "content-type",
+    })
+    assert preflight.status_code == 200
+    assert preflight.headers["access-control-allow-origin"] == origin
+    assert preflight.headers["access-control-allow-methods"] == "POST"
+    response = client.post("/api/chat", headers={"Origin": origin},
+                           json={"sessionId": "browser", "message": "Find Skok"})
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == origin
+
+
+def test_cors_uses_configured_origins(fake_redis):
+    app = create_app(Settings(cors_origins=["https://trails.example.org"]), fake_redis)
+    with TestClient(app) as client:
+        for origin, expected in [("https://trails.example.org", 200),
+                                 ("https://other.example.org", 400)]:
+            response = client.options("/api/chat", headers={
+                "Origin": origin, "Access-Control-Request-Method": "POST",
+            })
+            assert response.status_code == expected
+            assert response.headers.get("access-control-allow-origin") == (
+                origin if expected == 200 else None
+            )
+
+
+def test_production_client_has_bounded_timeouts(monkeypatch):
+    import gopstop_agent.main as main
+
+    seen = {}
+
+    def capture_client(url, **kwargs):
+        seen.update(kwargs)
+        return fakeredis.aioredis.FakeRedis(decode_responses=True)
+
+    monkeypatch.setattr(main, "from_url", capture_client)
+    with TestClient(create_app(Settings(valkey_connect_timeout_seconds=0.2,
+                                        valkey_socket_timeout_seconds=0.3))):
+        assert seen["socket_connect_timeout"] == 0.2
+        assert seen["socket_timeout"] == 0.3
+        assert seen["retry"].get_retries() == 0
