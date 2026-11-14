@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { realApi } from './realApi'
+import { ApiError, realApi } from './realApi'
 
 function stubFetch(body: unknown) {
   const fetchMock = vi.fn<typeof fetch>(async () => new Response(JSON.stringify(body), { status: 200 }))
@@ -32,5 +32,38 @@ describe('realApi', () => {
     expect(init?.method).toBe('POST')
     expect(sentHeaders(fetchMock).get('Content-Type')).toBe('application/json')
     expect(JSON.parse(String(init?.body))).toEqual({ sessionId: 's', message: 'hi' })
+  })
+})
+
+describe('realApi errors', () => {
+  function stubFailure(status: number, body: string, contentType = 'application/json') {
+    vi.stubGlobal('fetch', vi.fn<typeof fetch>(async () => new Response(body, { status, headers: { 'Content-Type': contentType } })))
+  }
+
+  it('shows the API Problem Details detail and keeps its code', async () => {
+    stubFailure(422, JSON.stringify({ type: 'about:blank', title: 'No hiking route', status: 422, detail: 'No walking route connects the requested waypoints.', code: 'no_hiking_route' }), 'application/problem+json')
+
+    const error = await realApi.getRoute('r1').catch((e: unknown) => e)
+
+    expect(error).toBeInstanceOf(ApiError)
+    expect(error).toMatchObject({ message: 'No walking route connects the requested waypoints.', status: 422, code: 'no_hiking_route' })
+  })
+
+  it("shows the agent's FastAPI detail", async () => {
+    stubFailure(503, JSON.stringify({ detail: 'Chat session storage is temporarily unavailable.' }))
+
+    await expect(realApi.chat({ sessionId: 's', message: 'hi' })).rejects.toThrow('Chat session storage is temporarily unavailable.')
+  })
+
+  it('joins FastAPI validation messages', async () => {
+    stubFailure(422, JSON.stringify({ detail: [{ loc: ['body', 'message'], msg: 'String should have at least 1 character', type: 'string_too_short' }] }))
+
+    await expect(realApi.chat({ sessionId: 's', message: '' })).rejects.toThrow('String should have at least 1 character')
+  })
+
+  it('does not show raw HTML from a proxy error page', async () => {
+    stubFailure(502, '<html><body>Bad Gateway</body></html>', 'text/html')
+
+    await expect(realApi.getRoute('r1')).rejects.toThrow('Request failed (502). Please try again.')
   })
 })
