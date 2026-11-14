@@ -3,7 +3,7 @@
 This is the shared execution and diagnostic guide for Murat, Mukhamed, and Daniil.
 Read it before changing a service boundary, preparing an integration environment,
 or reporting an end-to-end result. Last checked: November 14, 2026, against
-`main` at `d4c91e9` (through merged #42), plus the E2 implementation under review.
+`main` at `b51e4d0` (through merged #43), plus the resolution-cache follow-up under review.
 
 ## Authority and keeping the team aligned
 
@@ -35,8 +35,9 @@ Replace pending evidence with a PR/run link and tested revision; retain useful h
 | B2 | Required 24-hour routing cache | Murat | Merged | #41; 147 API tests and Java 21/infra CI passed; live Aiven check pending |
 | B3 | Discovery and internal API handoff | Mukhamed | Merged internally | #31, #40; fixtures do not enable HTTP chat |
 | B4 | Frontend route/source/error compatibility | Daniil | Merged | #35-#37; live browser acceptance pending |
+| B5 | Reuse source-grounded Claude resolutions | Mukhamed | Prepared; awaiting review/merge | 202 agent fixture tests pass; three rather than six resolution calls across two same-input requests; live latency unmeasured |
 | E1 | Researched place ingestion and OSM deduplication | Murat | Not implemented | Blocks actual agent-to-API ingestion |
-| E2 | HTTP chat orchestration and total deadline | Mukhamed | Prepared; awaiting review/merge | [#43](https://github.com/uksus148/trego./pull/43), tested `7b78c43`: 172 agent fixture tests pass; default disabled, E1/E4 block live use |
+| E2 | HTTP chat orchestration and total deadline | Mukhamed | Merged; default disabled | [#43](https://github.com/uksus148/trego./pull/43), both approvals at `b83382d`, merged as `b51e4d0`; 172 agent fixture tests passed; E1/E4 block live use |
 | E3 | Real-service frontend verification | Daniil | Pending | Disable mocks; verify direct/chat routes, sources, markers and errors |
 | E4 | Integration environment and credentials | Murat coordinates; all owners verify clients | Unverified | Record selected host, service targets and successful connections privately |
 | E5 | Full Tatras workflow | All three | Not run | Complete the acceptance matrix below on a recorded revision |
@@ -82,12 +83,18 @@ No automatic provider or API POST retries. Add one total chat deadline covering 
 handoff and session storage. Retain fixture injection for tests; verify live keys/model
 availability before enabling live orchestration. Request Murat and Daniil for their boundaries.
 
-The E2 branch implements this flow with injected HTTP fixtures and managed clients.
+Merged #43 implements this flow with injected HTTP fixtures and managed clients.
 It also bounds discovery to three concurrent candidate chains, joins cancelled work,
 and retains the shared Nominatim gate. `AGENT_CHAT_ENABLED=false` preserves baseline
 behavior; setting it true validates nonblank keys/model at startup, not their live access.
 The 180-second total deadline includes history and reply generation as well as the
 stages above. No public fields, API schemas or Kafka events change.
+
+The independent resolution-cache follow-up uses the existing Valkey configuration
+and deadlines. Its 24-hour key binds the complete effective Claude request, including
+ordered source content and model/prompt/schema. Cached source indices are revalidated;
+corrupt entries refresh, outages return safe 503 without bypass/retry. Intent/replies
+remain per-message. See [the agent guide](../agent/README.md#source-grounded-place-discovery).
 
 ### E3: Daniil - browser integration
 
@@ -172,7 +179,7 @@ and persistence overhead. Review this budget before live activation:
 | `AGENT_API_TIMEOUT_SECONDS` | 20 | 30 | Supported setting; proposal, not applied |
 | `AGENT_DISCOVERY_TIMEOUT_SECONDS` | 60 | 90 | Supported setting; proposal, not applied |
 | `AGENT_HANDOFF_TIMEOUT_SECONDS` | 60 | 60 | Existing supported setting |
-| `AGENT_CHAT_TIMEOUT_SECONDS` | E2 adds 180 | 180 | Implemented in the E2 branch; requires this PR's review/merge |
+| `AGENT_CHAT_TIMEOUT_SECONDS` | 180 | 180 | Merged in #43; live latency/proxy budget still needs preflight |
 
 Murat/Mukhamed confirm provider, database/cache and total budgets; Daniil verifies browser
 behavior. If hosted later, confirm proxy limits too. E2 adds the chat budget/switch
@@ -257,7 +264,11 @@ With E2's logging configuration, the agent emits `trace`, hashed `session`, `sta
 message text, credentials or raw session IDs. `routing_cache` times the API route
 POST; use API evidence to distinguish an actual cache hit from a provider call.
 
-E2 fixture evidence: `cd agent && uv run --frozen pytest -q` passes 172 tests.
+E2 fixture evidence in merged #43: 172 agent tests passed. With the resolution-cache
+follow-up, `cd agent && uv run --frozen pytest -q` passes 202 tests. Cache tests cover
+expiry/unchanged hit TTL, source/model/prompt/schema invalidation, unresolved results,
+corrupt entries, failures and cancellation. Repeated HTTP requests keep sourced Places,
+history and saved route IDs while avoiding three repeated place-resolution calls.
 The HTTP test exercises actual discovery/handoff factories, sourced API records,
 saved-route readback, follow-up history, clarification/no-route, safe errors and
 cancellation at every chat stage. No paid calls, live Aiven or browser acceptance

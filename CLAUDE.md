@@ -111,9 +111,9 @@ in merged PR #34: [Murat accepted D1–D4 personally](https://github.com/uksus14
 and [Daniil accepted D1/D3/D4/D5 and the clarified frontend work](https://github.com/uksus148/trego/pull/34#pullrequestreview-5903913530).
 Mukhamed owns the agent implementation. Agreement is not runtime availability:
 main includes manual creation, persisted routes (#39), the required routing cache (#41),
-and the internal agent handoff (#40). E2 HTTP orchestration is prepared in this PR,
-fixture-tested and disabled by default; researched ingestion remains API work.
-Review/merge E1/E2 and verify live preflight before activation. Track those gates
+and the internal agent handoff (#40). E2 HTTP orchestration merged in #43 after
+both teammates approved; it is fixture-tested and disabled by default.
+Researched ingestion remains API work. Review/merge E1 and verify live preflight before activation. Track those gates
 and actual runtime evidence in the [integration runbook](docs/INTEGRATION_RUNBOOK.md).
 
 - **Researched ingestion (D1/D2):** `POST /api/places` adds optional, complete
@@ -179,7 +179,8 @@ and actual runtime evidence in the [integration runbook](docs/INTEGRATION_RUNBOO
   `AGENT_CHAT_TIMEOUT_SECONDS=180` bounds history, discovery, handoff, reply and
   session storage. Existing 20/60/60-second API/discovery/handoff defaults remain;
   the runbook's 30/90-second diagnostic values are proposals for owner review.
-  This PR requests both owners' review of activation, budgets and chat behavior.
+  Both owners reviewed activation, budgets and chat behavior in #43; actual
+  latency/provider/proxy budgets still need live-preflight measurement.
 
 ### Route implementation selected by Murat
 
@@ -337,6 +338,11 @@ Role-specific skills listed in the original team plan follow.
 - November 14 — Every PR requires review and approval by at least one developer other than the author, including internal changes that affect no other component. Request review from owners of the components affected by a PR. GitHub requires one independent approval. Additional reviewers are selected when their components or shared contracts are affected. Murat's assistant reviews backend, shared infrastructure, repository governance, and backend-facing integration. In a stack, retarget the next PR to main before merging it (#14 and #15 landed in stack branches and were re-landed in #21).
 - November 14 — The hiking-intent adapter uses Claude tool use with a validated `{start, end, mustSee[], preferences[]}` result and at most six recent session exchanges. Blank values are normalized; results exceeding five intermediate stops or twelve preferences require user clarification. Provider requests have explicit timeouts and no automatic paid retries. The HTTP chat contract stays on the baseline; connecting intent and place discovery is a later block.
 - November 14 — The internal Exa text-research adapter retains source URLs and caches responses in Valkey for 24 hours. [The agent delivery plan](docs/AGENT_PLAN.md) records sequential blocks and unresolved integration gates; shared API/schema/event proposals remain unapproved until the affected owners agree.
+- November 14 — The agent's internal place-resolution cache is prepared for review:
+  cache validated Claude results (including unresolved) for 24 hours by the full
+  effective request hash: model, prompt/schema, description and ordered evidence.
+  Preserve source binding; refresh corrupt entries, surface cache outages without
+  paid retries, and leave chat activation/error contracts unchanged.
 - November 14 — Internal place discovery combines intent, source-grounded resolution, and cached, rate-limited Nominatim lookup. The merged place API returns UUID strings; discovery findings retain research and OSM identity separately. The HTTP chat contract stays unchanged; API write/route handoff needed owner agreement at this stage (subsequently accepted in #34). Daniil confirmed in PR #28 that chat and clarification replies follow the user's message language, while UI labels remain English.
 
 - November 14 — Murat selected Spring Data JPA for ordinary API persistence, with Hibernate Spatial for PostGIS mapping. Native JPA queries preserve the current spatial filters; JDBC remains an option for complex queries. Flyway continues to own schema changes, and application services own transaction boundaries. The implementation and shared documentation changes require the normal PR review.

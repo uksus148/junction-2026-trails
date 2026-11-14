@@ -54,8 +54,8 @@ Run automated tests with `pytest`.
 
 ## Enable orchestration after integration preflight
 
-Keep `AGENT_CHAT_ENABLED=false` until researched ingestion (runbook E1) and this
-E2 implementation are reviewed/merged, and E4 confirms actual credentials, model,
+E2 merged in #43 with both reviewers' approvals. Keep `AGENT_CHAT_ENABLED=false`
+until researched ingestion (runbook E1) is reviewed/merged and E4 confirms credentials, model,
 cache and service connectivity. Then set it to `true` in the root `.env` and restart.
 The manual place handler is not a research fallback or capability probe.
 See the [shared runbook](../docs/INTEGRATION_RUNBOOK.md) for the remaining gates.
@@ -136,6 +136,22 @@ required location is missing. Repeated targets reuse work without removing visit
 Up to three unique candidate chains run concurrently, retaining requested order;
 all unfinished chains are cancelled and joined on failure or cancellation.
 
+`CachedPlaceResolver` wraps Claude resolution in the production discovery factory.
+Valkey retains validated results, including unresolved results, for 24 hours.
+The versioned SHA-256 key covers the effective request: model, prompt/tool schema,
+description and ordered source titles, URLs and text (only the three sent to Claude).
+Changing any of those inputs requires a new resolution; credentials and session IDs
+are excluded. Cache values contain only the typed resolution or null, never the
+original request, keys or conversation history. Intent and replies remain per-message.
+
+Hits do not refresh TTL. Expiry requires a fresh model call; malformed entries or
+out-of-range source references refresh through the existing validated adapter.
+A cache-read outage stops before the model; a write outage propagates after one
+possibly paid call. Chat maps either to a safe 503 before ingestion. Failed or
+cancelled provider work is not cached/retried. Concurrent first misses may still
+make duplicate calls; this cache adds no distributed coalescing guarantee.
+No new configuration is needed; it uses the existing Valkey client and deadlines.
+
 Nominatim results, including empty/ambiguous ones, are cached for 24 hours. A
 shared Valkey token gate holds through each request and for one second after it
 finishes, including errors. Waiting has a deadline; ownership checks prevent an
@@ -182,7 +198,11 @@ this client is not a capability probe. Tests use HTTP fixtures, including repeat
 direct hikes, first-write replay, incomplete intent, provider/storage failures,
 malformed responses, possible partial writes, and cancellation. HTTP chat tests
 cover language/history, saved-route publication, failures, and every deadline stage.
-Live API/ORS, actual model language behavior, and the browser flow remain unverified.
+The full agent suite passes 202 fixture tests. In two same-input discoveries/chat
+requests, the three places require three resolution calls total, rather than six;
+history, canonical places and saved-route readback still pass. This is call-count
+evidence, not a measured live speedup. Live API/ORS, actual model language behavior,
+and the browser flow remain unverified.
 
 Before photos are enabled, agree the API/agent policy for incomplete attribution
 or invalid photo URLs. The current strict photo model rejects an invalid photo

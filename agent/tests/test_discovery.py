@@ -88,6 +88,9 @@ async def test_tatras_discovery_preserves_sources_coordinates_waypoint_order_and
             assert "id" not in payload["stops"][0]["place"] and "routeId" not in payload
     assert sum(r.url.host == "api.exa.ai" for r in calls) == 3
     assert sum(r.url.host == "nominatim.openstreetmap.org" for r in calls) == 3
+    resolution = [r for r in calls if r.url.host == "api.anthropic.com"
+                  and json.loads(r.content)["tool_choice"]["name"] == "resolve_place"]
+    assert len(resolution) == 3  # Three cold resolutions, none on the repeated discovery.
     extraction = [json.loads(r.content) for r in calls if r.url.host == "api.anthropic.com"
                   and json.loads(r.content)["tool_choice"]["name"] == "extract_route_intent"]
     assert all(body["messages"][:-1] == history for body in extraction)
