@@ -31,6 +31,6 @@ class Settings(BaseSettings):
     discovery_timeout_seconds: float = Field(default=60, gt=0, le=180)
     nominatim_base_url: HttpUrl = "https://nominatim.openstreetmap.org"
     nominatim_user_agent: str = Field(
-        default="GopstopTrails/0.1 (https://github.com/uksus148/junction-2026-trails)",
+        default="trego/0.1 (https://github.com/uksus148/trego)",
         min_length=8,
     )

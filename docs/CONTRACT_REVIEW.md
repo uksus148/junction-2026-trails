@@ -1,4 +1,4 @@
-# Contract review across frontend, api, and agent
+# trego. Contract review
 
 Murat's local [CLAUDE.md](../CLAUDE.md), translated into English, provides the shared baseline. This file gathers decisions for discussion in the PR. Record agreed changes in the API contract section and decision log of CLAUDE.md.
 

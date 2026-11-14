@@ -1,4 +1,4 @@
-# GOPSTOP.PROTOCOL Agent
+# trego. Agent
 
 The agent is a FastAPI service implementing the baseline `POST /api/chat` contract. This first block validates requests, stores each user/assistant exchange in Valkey, and returns an honest placeholder response with no discovered places until the intent and search integrations are implemented.
 

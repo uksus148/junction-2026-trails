@@ -1,4 +1,4 @@
-# Repository rules
+# trego. Repository rules
 
 These rules apply to Murat (`uksus148`), Daniil (`nnatthebest`), and Mukhamed (`dyksookelwe`). Both collaborators have write access. Murat owns the repository and follows the same code review process.
 
@@ -52,4 +52,4 @@ The root CLAUDE.md holds architecture, the shared API contract, and team decisio
 
 README describes the project and setup. CONTRIBUTING.md defines commit, PR, and review conventions. This document describes branch protection. Write all repository files and GitHub collaboration content in English.
 
-[Active ruleset](https://github.com/uksus148/junction-2026-trails/rules/27240390).
+[Active ruleset](https://github.com/uksus148/trego/rules/27240390).

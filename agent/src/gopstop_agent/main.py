@@ -66,7 +66,7 @@ def create_app(
             if owns_client:
                 await client.aclose()
 
-    app = FastAPI(title="GOPSTOP.PROTOCOL Agent", version="0.1.0", lifespan=lifespan)
+    app = FastAPI(title="trego. Agent", version="0.1.0", lifespan=lifespan)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=configured.cors_origins,

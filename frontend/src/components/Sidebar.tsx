@@ -26,7 +26,7 @@ export function Sidebar({ trip }: SidebarProps) {
       <header className="space-y-3 px-5 pt-5 pb-3">
         <div>
           <div className="flex items-center justify-between">
-            <h1 className="font-display text-xl font-bold tracking-tight">GOPSTOP.PROTOCOL</h1>
+            <h1 className="font-display text-xl font-bold tracking-tight">trego.</h1>
             {USE_MOCKS && <span className="rounded-full bg-line px-2 py-0.5 text-xs text-stone">demo data</span>}
           </div>
           <p className="mt-1 text-sm text-stone">Routes built around what you want to see.</p>

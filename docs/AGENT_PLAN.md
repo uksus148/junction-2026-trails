@@ -1,4 +1,4 @@
-# Agent delivery and integration plan
+# trego. Agent delivery and integration plan
 
 This plan follows [CLAUDE.md](../CLAUDE.md), the
 [contract review](CONTRACT_REVIEW.md), and the
@@ -13,7 +13,7 @@ approve new endpoints, fields, tables, or Kafka event schemas.
 - PR #28 is merged: Exa text evidence with source URLs and a 24-hour Valkey cache.
 - HTTP chat still uses `{sessionId, message}` -> `{reply, places, routeId?}`.
 - Spring Boot owns persisted places, routes, uploads, SQL, and Flyway migrations.
-- [PR #27](https://github.com/uksus148/junction-2026-trails/pull/27) is merged:
+- [PR #27](https://github.com/uksus148/trego/pull/27) is merged:
   GET /api/places, a Flyway places table, UUID IDs, and HTTP 400 Problem Details.
   API CORS and the client header fix (#29) are merged too. Place creation and
   route handoff remain separate.

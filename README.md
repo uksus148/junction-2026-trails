@@ -1,6 +1,6 @@
-# Junction 2026 · Hiking Route Planner
+# trego.
 
-Plan a hiking route through interesting places and see photos along the way, with authors and source links. Describe your preferences in chat or choose places on a map. The team is still deciding on the product name.
+Plan a hiking route through interesting places and see photos along the way, with authors and source links. Describe your preferences in chat or choose places on a map.
 
 The required demo route runs through the High Tatras, from Štrbské Pleso to Rysy via the Skok waterfall. Support for other regions depends on the readiness of the integrations.
 
@@ -23,12 +23,12 @@ Planned shared services are Aiven PostgreSQL with PostGIS and pgvector, Valkey, 
 4. Read [CONTRIBUTING.md](CONTRIBUTING.md) and the [repository rules](docs/REPOSITORY_RULES.md) before opening a PR.
 
 ```sh
-git clone https://github.com/uksus148/junction-2026-trails.git
-cd junction-2026-trails
+git clone https://github.com/uksus148/trego.git
+cd trego
 cp .env.example .env
 ```
 
-The local database requires Docker and Docker Compose. PostgreSQL 18, PostGIS, pgvector, and a configurable port are prepared in [PR #1](https://github.com/uksus148/junction-2026-trails/pull/1), which includes setup instructions and CI results. The frontend is under review in [PRs #4–10](https://github.com/uksus148/junction-2026-trails/pulls). Each service adds its run commands to its own directory as implementation progresses.
+The local database requires Docker and Docker Compose. PostgreSQL 18, PostGIS, pgvector, and a configurable port are prepared in [PR #1](https://github.com/uksus148/trego/pull/1), which includes setup instructions and CI results. The frontend is under review in [PRs #4–10](https://github.com/uksus148/trego/pulls). Each service adds its run commands to its own directory as implementation progresses.
 
 Aiven Free has been verified with PostgreSQL 18.7, PostGIS 3.6.4, and pgvector 0.8.7. Share service credentials through a private channel. Git ignores the local `.env`.
 
