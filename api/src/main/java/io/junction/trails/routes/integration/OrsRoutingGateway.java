@@ -5,6 +5,7 @@ import io.junction.trails.routes.application.RoutingGateway;
 import io.junction.trails.routes.model.GeoPoint;
 import io.junction.trails.routes.model.RouteException;
 import io.junction.trails.routes.model.RouteTrack;
+import io.junction.trails.routes.model.RoutingQuery;
 import java.net.SocketTimeoutException;
 import java.net.http.HttpTimeoutException;
 import java.util.ArrayList;
@@ -23,11 +24,11 @@ public class OrsRoutingGateway implements RoutingGateway {
     private final OrsProperties properties;
 
     @Override
-    public RouteTrack route(List<GeoPoint> orderedWaypoints) {
+    public RouteTrack route(RoutingQuery query) {
         if (properties.apiKey().isBlank()) {
             throw providerError();
         }
-        var coordinates = orderedWaypoints.stream().map(point -> List.of(point.lon(), point.lat())).toList();
+        var coordinates = query.orderedWaypoints().stream().map(point -> List.of(point.lon(), point.lat())).toList();
         long started = System.nanoTime();
         try {
             JsonNode response = client.post().uri(properties.directionsUrl()).contentType(MediaType.APPLICATION_JSON)

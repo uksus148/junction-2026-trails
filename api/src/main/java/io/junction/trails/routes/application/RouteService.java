@@ -3,9 +3,9 @@ package io.junction.trails.routes.application;
 import io.junction.trails.routes.model.GeoPoint;
 import io.junction.trails.routes.model.NewRoute;
 import io.junction.trails.routes.model.Route;
+import io.junction.trails.routes.model.RoutingQuery;
 import io.junction.trails.routes.persistence.RoutePersistence;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -22,7 +22,7 @@ public class RouteService {
         waypoints.add(request.start());
         stops.forEach(place -> waypoints.add(new GeoPoint(place.lat(), place.lon())));
         waypoints.add(request.end());
-        var track = routing.route(List.copyOf(waypoints));
+        var track = routing.route(new RoutingQuery(request, waypoints));
         return persistence.save(request, track);
     }
 

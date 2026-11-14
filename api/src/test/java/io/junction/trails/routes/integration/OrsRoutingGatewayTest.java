@@ -1,7 +1,9 @@
 package io.junction.trails.routes.integration;
 
 import io.junction.trails.routes.model.GeoPoint;
+import io.junction.trails.routes.model.NewRoute;
 import io.junction.trails.routes.model.RouteException;
+import io.junction.trails.routes.model.RoutingQuery;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpTimeoutException;
@@ -32,6 +34,8 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 
 class OrsRoutingGatewayTest {
     private static final List<GeoPoint> WAYPOINTS = List.of(new GeoPoint(49, 20), new GeoPoint(49.2, 20.2));
+    private static final RoutingQuery QUERY = new RoutingQuery(
+            new NewRoute(WAYPOINTS.getFirst(), WAYPOINTS.getLast(), List.of(), List.of()), WAYPOINTS);
     private static final String URL = "https://ors.test/openrouteservice/v2/directions/foot-hiking/geojson";
     private MockRestServiceServer server;
     private OrsRoutingGateway gateway;
@@ -52,7 +56,7 @@ class OrsRoutingGatewayTest {
                         """))
                 .andRespond(withSuccess(new ClassPathResource("ors/route.geojson"),
                         MediaType.parseMediaType("application/geo+json")));
-        var track = gateway.route(WAYPOINTS);
+        var track = gateway.route(QUERY);
         assertThat(track.distanceKm()).isEqualTo(7.5);
         assertThat(track.durationMin()).isEqualTo(90);
         assertThat(track.ascentM()).isEqualTo(600);
@@ -142,7 +146,7 @@ class OrsRoutingGatewayTest {
     }
 
     private void assertReason(RouteException.Reason reason) {
-        assertThatThrownBy(() -> gateway.route(WAYPOINTS)).isInstanceOfSatisfying(RouteException.class, error -> {
+        assertThatThrownBy(() -> gateway.route(QUERY)).isInstanceOfSatisfying(RouteException.class, error -> {
             assertThat(error.getReason()).isEqualTo(reason);
             assertThat(error.getMessage()).doesNotContain("secret", "upstream details");
         });
