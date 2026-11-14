@@ -111,8 +111,9 @@ in merged PR #34: [Murat accepted D1–D4 personally](https://github.com/uksus14
 and [Daniil accepted D1/D3/D4/D5 and the clarified frontend work](https://github.com/uksus148/trego/pull/34#pullrequestreview-5903913530).
 Mukhamed owns the agent implementation. Agreement is not runtime availability:
 main includes manual creation, persisted routes (#39), the required routing cache (#41),
-and the internal agent handoff (#40). Researched ingestion and HTTP chat orchestration
-still need implementation/review before live chat-to-route activation. Track those gates
+and the internal agent handoff (#40). E2 HTTP orchestration is prepared in this PR,
+fixture-tested and disabled by default; researched ingestion remains API work.
+Review/merge E1/E2 and verify live preflight before activation. Track those gates
 and actual runtime evidence in the [integration runbook](docs/INTEGRATION_RUNBOOK.md).
 
 - **Researched ingestion (D1/D2):** `POST /api/places` adds optional, complete
@@ -172,6 +173,13 @@ and actual runtime evidence in the [integration runbook](docs/INTEGRATION_RUNBOO
   endpoint metadata/sources alongside the fetched route, anchors markers to track
   ends, resets stale manual endpoints, and displays sources/OSM attribution.
   Frontend follow-ups #35–#37 are merged; live acceptance remains required.
+
+  E2 uses `AGENT_CHAT_ENABLED=false` by default. Enabled startup requires nonblank
+  Claude/Exa keys and a model ID; account/model access is a separate live check.
+  `AGENT_CHAT_TIMEOUT_SECONDS=180` bounds history, discovery, handoff, reply and
+  session storage. Existing 20/60/60-second API/discovery/handoff defaults remain;
+  the runbook's 30/90-second diagnostic values are proposals for owner review.
+  This PR requests both owners' review of activation, budgets and chat behavior.
 
 ### Route implementation selected by Murat
 

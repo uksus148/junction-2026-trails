@@ -61,6 +61,7 @@ class PlaceDiscovery:
             async with asyncio.timeout(self._timeout_seconds):
                 with stage("intent"):
                     intent = await self._intent.extract(message, history)
+
                 async def find(description: str) -> PlaceFinding:
                     query = (f"Find hiking place: {description}. Route context: "
                              f"{intent.start or 'unspecified'} to {intent.end or 'unspecified'}.")
@@ -104,7 +105,7 @@ class PlaceDiscovery:
 
 
 def create_discovery(client: httpx.AsyncClient, cache: Redis, settings: Settings) -> PlaceDiscovery:
-    """Build during startup when live discovery is enabled by a future caller."""
+    """Compose discovery during opt-in chat startup or explicit fixture use."""
     claude_key = settings.anthropic_api_key.get_secret_value()
     exa_key = settings.exa_api_key.get_secret_value()
     if not claude_key or not exa_key:

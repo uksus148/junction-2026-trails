@@ -7,8 +7,8 @@ from pydantic import BaseModel
 
 from gopstop_agent.api_models import ApiPlace, ApiRoute
 from gopstop_agent.config import Settings
-from gopstop_agent.discovery import DiscoveryResult
 from gopstop_agent.diagnostics import stage
+from gopstop_agent.discovery import DiscoveryResult
 from gopstop_agent.trails_api import HandoffError, TrailsApi
 
 
@@ -54,6 +54,6 @@ class RouteHandoff:
 
 
 def create_handoff(client: httpx.AsyncClient, settings: Settings) -> RouteHandoff:
-    """Compose explicitly; HTTP chat does not enable this internal client yet."""
+    """Compose the handoff during opt-in chat startup or explicit fixture use."""
     return RouteHandoff(TrailsApi(client, str(settings.api_base_url), settings.api_timeout_seconds),
                         settings.handoff_timeout_seconds)

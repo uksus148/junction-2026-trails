@@ -10,7 +10,7 @@ from gopstop_agent.discovery import DiscoveredPlace
 
 
 class HandoffError(Exception):
-    """Safe dependency error for future HTTP wiring; never includes API bodies."""
+    """Safe dependency error for HTTP chat; never includes API bodies."""
 
     def __init__(self, message: str, status_code: int = 502) -> None:
         self.status_code = status_code

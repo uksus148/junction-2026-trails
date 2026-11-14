@@ -20,12 +20,17 @@ async def test_research_is_bounded_ordered_and_joined_before_return_or_failure(f
     async def research(query):
         nonlocal active, maximum, arrivals, cancelled
         name = query.removeprefix("Find hiking place: ").split(". Route context:")[0]
-        active += 1; arrivals += 1; maximum = max(maximum, active)
-        if arrivals == 3: started.set()
+        active += 1
+        arrivals += 1
+        maximum = max(maximum, active)
+        if arrivals == 3:
+            started.set()
         try:
             await asyncio.wait_for(started.wait(), 1)
-            if failure and name == "A": raise ProviderError("fixture failure")
-            if failure: await asyncio.sleep(10)
+            if failure and name == "A":
+                raise ProviderError("fixture failure")
+            if failure:
+                await asyncio.sleep(10)
             await asyncio.sleep(0)
             return [ResearchSource(title=name, sourceUrl="https://source.example/", text="Evidence")]
         except asyncio.CancelledError:

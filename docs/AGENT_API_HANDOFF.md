@@ -270,11 +270,11 @@ follow-ups #35–#37 are merged; their fixture checks are not live route accepta
 3. The accepted decisions and examples are in CLAUDE.md. Murat implements the
    API-owned writes/routes on that agreed contract; test concurrency, malformed
    inputs, repeated stops, no-route, outages, and saved-route retrieval.
-4. Mukhamed's next agent implementation connects chat using fixtures for the
-   accepted API. Enable live orchestration only when those API handlers exist;
-   check required keys at startup and impose one total chat deadline. Address
-   Daniil's #31 latency suggestion with bounded concurrent research/resolution,
-   while keeping shared Nominatim serialization and cancellation guarantees.
+4. Mukhamed's E2 implementation connects chat against accepted fixtures, with
+   managed clients, language-aware replies/history, a total deadline, and up to
+   three concurrent candidate chains. Nominatim serialization and cancellation
+   remain enforced. It is disabled by default and awaits review/merge; enable
+   only after E1 and live preflight. Track evidence in the integration runbook.
 5. Daniil implemented the D5 frontend follow-ups in #35–#37. Before live
    acceptance, test
    a direct chat hike with `placeIds: []`, `Route.places: []`, and no photos:

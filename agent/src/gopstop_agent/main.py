@@ -13,8 +13,8 @@ from redis.asyncio.retry import Retry
 from redis.backoff import NoBackoff
 from redis.exceptions import RedisError
 
-from gopstop_agent.config import Settings
 from gopstop_agent.chat import ChatResponse, ChatService, create_chat
+from gopstop_agent.config import Settings
 from gopstop_agent.diagnostics import stage, trace
 from gopstop_agent.intent import ProviderError, ProviderTimeout
 from gopstop_agent.sessions import SessionStore, ValkeySessionStore
@@ -103,7 +103,11 @@ def create_app(
                 async with asyncio.timeout(configured.chat_timeout_seconds):
                     service = request.app.state.chat_service
                     if service is None:
-                        result = ChatResponse(reply="Thanks, I’ve saved your request. Place discovery and route planning are not configured yet.", places=[])
+                        result = ChatResponse(
+                            reply="Thanks, I’ve saved your request. "
+                                  "Place discovery and route planning are not configured yet.",
+                            places=[],
+                        )
                     else:
                         with stage("history"):
                             history = await session_store.history(payload.sessionId)

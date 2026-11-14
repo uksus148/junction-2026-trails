@@ -9,7 +9,7 @@ import pytest
 from fastapi.testclient import TestClient
 from redis.exceptions import RedisError
 
-from gopstop_agent.chat import ChatResponse, ChatService
+from gopstop_agent.chat import ChatService
 from gopstop_agent.config import Settings
 from gopstop_agent.handoff import HandoffResult
 from gopstop_agent.intent import IntentClarificationRequired, ProviderError, ProviderTimeout
@@ -96,8 +96,10 @@ def service_for(finding=None, extraction_error=None, handoff_error=None):
 @pytest.mark.parametrize("kind", ["missing", "ambiguous", "limits", "no_route"])
 async def test_normal_clarifications_and_no_route_store_exchange_without_route_id(build_app, kind):
     finding = discovery()
-    if kind == "missing": finding.intent.end = None
-    if kind == "ambiguous": finding.stops[0].place = None
+    if kind == "missing":
+        finding.intent.end = None
+    if kind == "ambiguous":
+        finding.stops[0].place = None
     service, _, handoff, replies = service_for(
         finding, IntentClarificationRequired("Choose at most five stops.") if kind == "limits" else None,
         NoHikingRoute() if kind == "no_route" else None,
@@ -108,7 +110,8 @@ async def test_normal_clarifications_and_no_route_store_exchange_without_route_i
     assert response.status_code == 200 and response.json() == {"reply": "Уточните маршрут.", "places": []}
     assert await cache.llen("gopstop:chat-session:clarify") == 2
     assert replies.write.call_args.args[2] == ("no_route" if kind == "no_route" else "clarification")
-    if kind != "no_route": handoff.persist.assert_not_awaited()
+    if kind != "no_route":
+        handoff.persist.assert_not_awaited()
 
 
 @pytest.mark.parametrize("failure,status", [(ProviderError("private"), 502), (ProviderTimeout("private"), 504),
@@ -125,17 +128,20 @@ async def test_dependency_failure_never_records_success(build_app, failure, stat
     assert response.status_code == status and "private" not in response.text
     assert response.headers["access-control-allow-origin"] == "http://localhost:5173"
     assert await cache.llen("gopstop:chat-session:failed") == 0
-    if not isinstance(failure, HandoffError): handoff.persist.assert_not_awaited()
+    if not isinstance(failure, HandoffError):
+        handoff.persist.assert_not_awaited()
     replies.write.assert_not_awaited()
 
 
 @pytest.mark.parametrize("phase", ["reply", "session_save"])
 async def test_failure_after_route_creation_returns_error_without_claiming_saved_exchange(build_app, phase):
     service, _, handoff, replies = service_for()
-    if phase == "reply": replies.write.side_effect = ProviderError("private")
+    if phase == "reply":
+        replies.write.side_effect = ProviderError("private")
     app, cache, _ = build_app(service=service)
     with TestClient(app) as client:
-        if phase == "session_save": app.state.session_store.record_exchange = AsyncMock(side_effect=RedisError("private"))
+        if phase == "session_save":
+            app.state.session_store.record_exchange = AsyncMock(side_effect=RedisError("private"))
         response = client.post("/api/chat", json={"sessionId": "failed", "message": "Find Skok"})
     assert response.status_code == (502 if phase == "reply" else 503)
     assert await cache.llen("gopstop:chat-session:failed") == 0
@@ -147,12 +153,15 @@ async def test_total_deadline_covers_all_async_stages_and_cancels_work(build_app
     stopped = asyncio.Event()
 
     async def stall(*_):
-        try: await asyncio.sleep(10)
-        finally: stopped.set()
+        try:
+            await asyncio.sleep(10)
+        finally:
+            stopped.set()
 
     service, search, handoff, replies = service_for()
     target = {"discovery": search.discover, "handoff": handoff.persist, "reply": replies.write}.get(phase)
-    if target is not None: target.side_effect = stall
+    if target is not None:
+        target.side_effect = stall
     app, cache, _ = build_app(service=service, chat_timeout_seconds=0.02)
     with TestClient(app) as client:
         if phase in ("history", "session_save"):
@@ -182,7 +191,8 @@ def test_enabled_production_factory_rejects_missing_keys_before_resources(monkey
     monkeypatch.setattr(main, "from_url", factory)
     values = {"anthropic_api_key": "fixture", "exa_api_key": "fixture", "anthropic_model": "model", field: " "}
     with pytest.raises(ValueError, match="requires Claude/Exa"):
-        with TestClient(create_app(Settings(_env_file=None, chat_enabled=True, **values))): pass
+        with TestClient(create_app(Settings(_env_file=None, chat_enabled=True, **values))):
+            pass
     factory.assert_not_called()
 
 
@@ -204,8 +214,10 @@ async def test_disabled_mode_has_no_provider_calls_and_owned_resources_close(bui
     app = create_app(Settings(_env_file=None, chat_enabled=True, anthropic_api_key="fixture", exa_api_key="fixture"))
     if startup_failure:
         with pytest.raises(ValueError, match="factory failed"):
-            with TestClient(app): pass
+            with TestClient(app):
+                pass
     else:
-        with TestClient(app): pass
+        with TestClient(app):
+            pass
     assert owned_http.is_closed
     close.assert_awaited_once()

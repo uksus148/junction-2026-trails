@@ -30,8 +30,10 @@ ledger, environment prerequisites, diagnostic sequence and actual end-to-end evi
 - PR #39 is merged: persisted ORS hiking routes and readback. The required
   Valkey cache is merged in #41; live Aiven verification remains pending.
 - PR #40 adds the merged internal API adapter and route handoff with fixture
-  validation; HTTP chat is still the baseline placeholder. Researched ingestion
-  and HTTP orchestration remain required before live chat-to-route use.
+  validation. Runbook E2 is prepared in this PR: opt-in HTTP orchestration,
+  language-aware replies, history, bounded concurrency, stage logs and total deadline.
+  All 172 agent fixture tests pass. Default chat remains disabled; E1 researched
+  ingestion, E2 review/merge and E4 preflight are required before live activation.
 - Mukhamed implements the agent; Murat owns the API/storage boundary; Daniil owns
   the frontend/chat boundary. Request both teammates for each agent PR.
 
@@ -49,7 +51,7 @@ against current contracts. Closed PRs #23–#25 are references, not a merge queu
 | 1 | Exa text research and Valkey caching, merged in #28 and #31 | Sources retain URLs; repeated queries use a 24-hour cache; mixed-result resilience is tested |
 | 2 | Source-grounded resolution, Nominatim, and internal discovery, merged in #31 | A request yields ordered sourced findings with unique WGS84 coordinates and attribution; ambiguous/missing places stay unresolved; shared rate limits, caching, and overall deadlines are tested |
 | 3 | API ingestion and route handoff agreement, accepted in #34 | Owner approvals are linked and D1–D5 decisions/examples are published in CLAUDE.md |
-| 4 | Chat-to-route orchestration; internal persistence/readback prepared in this increment | Intent, research, geocoding, API persistence, and routing follow the agreed contract; frontend fetches and displays the returned persisted route |
+| 4 | Chat-to-route orchestration; HTTP E2 prepared, default disabled | Review/merge E2 and API E1, then verify persisted routes in the real frontend (E3-E5) |
 | 5 | Licensed photos along the hike | Each displayed photo has author, license, sourceUrl, and coordinates; routes/photos follow the existing units and segment shapes |
 | 6 | Gemini embeddings and pgvector ranking | Model/dimension and Flyway schema are agreed; preferences rank places/captions; repeated indexing is idempotent |
 | 7 | Kafka upload processing and EXIF | photo.uploaded payload/storage access are agreed; consumer handles missing EXIF, duplicates, retries, and nearby trail association |
@@ -72,8 +74,8 @@ These questions need the affected owners' answers, not unilateral agent changes:
   submits returned endpoint coordinates and ordered/repeated intermediate UUIDs,
   validates the full created Route, then GETs the saved route before success.
   Only a complete 422 `no_hiking_route` problem is a normal no-route outcome;
-  dependency failures remain errors. The HTTP chat still needs orchestration,
-  clarification in the user's language, session handling and one overall deadline.
+  dependency failures remain errors. E2 composes these adapters with language-aware
+  replies, session handling and a 180-second overall deadline; review remains required.
 - **Photos and vectors: Murat + Mukhamed.** Agree entity keys, source metadata,
   caption storage, Gemini model, output dimension, and upsert semantics before
   Flyway migrations or vector writes. Do not infer an image license from a search
@@ -95,13 +97,14 @@ affected owners' responses, even when GitHub's approval minimum is satisfied.
 - Coordinates in objects are WGS84 lat/lon; GeoJSON is `[lon, lat]`. Keep distance
   in km, ascent in m, and duration in minutes. Do not substitute straight lines or
   guessed IDs for a persisted hiking route.
-- At chat wiring, handle IntentClarificationRequired as a normal reply with no
+- E2 handles IntentClarificationRequired as a normal reply with no
   routeId. Provider/storage failures remain honest errors; do not save a success
-  for failed work. Set an overall request deadline, and validate required keys at
+  for failed work. It imposes an overall request deadline and validates required keys at
   startup only when the corresponding live feature is enabled.
 - Daniil confirmed in PR #28 that replies and clarification questions follow the
-  user's message language, while UI labels stay English. Implement that at chat
-  wiring. Do not add day-mode fields to the existing chat request incidentally.
+  user's message language, while UI labels stay English. E2 supplies authoritative
+  outcome facts to a reply writer; actual model behavior remains a live check.
+  Do not add day-mode fields to the existing chat request incidentally.
 - PR #34 records required frontend integration work: retain chat endpoint Place
   records/sources alongside fetched routes, reset stale manual endpoints and
   derive both markers from the new track, deduplicate markers without losing
