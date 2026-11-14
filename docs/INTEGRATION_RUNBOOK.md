@@ -35,7 +35,7 @@ Replace pending evidence with a PR/run link and tested revision; retain useful h
 | B2 | Required 24-hour routing cache | Murat | Merged | #41; 147 API tests and Java 21/infra CI passed; live Aiven check pending |
 | B3 | Discovery and internal API handoff | Mukhamed | Merged internally | #31, #40; fixtures do not enable HTTP chat |
 | B4 | Frontend route/source/error compatibility | Daniil | Merged | #35-#37; live browser acceptance pending |
-| B5 | Reuse source-grounded Claude resolutions | Mukhamed | Prepared; awaiting review/merge | 202 agent fixture tests pass; three rather than six resolution calls across two same-input requests; live latency unmeasured |
+| B5 | Reuse source-grounded Claude resolutions | Mukhamed | Prepared; awaiting review/merge | [#44](https://github.com/uksus148/trego./pull/44), tested `38ba99f`: 202 agent fixture tests pass; three rather than six resolution calls across two same-input requests; live latency unmeasured |
 | E1 | Researched place ingestion and OSM deduplication | Murat | Not implemented | Blocks actual agent-to-API ingestion |
 | E2 | HTTP chat orchestration and total deadline | Mukhamed | Merged; default disabled | [#43](https://github.com/uksus148/trego./pull/43), both approvals at `b83382d`, merged as `b51e4d0`; 172 agent fixture tests passed; E1/E4 block live use |
 | E3 | Real-service frontend verification | Daniil | Pending | Disable mocks; verify direct/chat routes, sources, markers and errors |
