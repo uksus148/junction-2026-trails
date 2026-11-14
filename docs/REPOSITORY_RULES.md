@@ -9,7 +9,7 @@ The active `main-team-review` ruleset targets the repository's default branch, c
 | Requirement | GitHub behavior |
 |---|---|
 | Changes through PRs | Push changes to a task branch and submit a PR |
-| One approval | Require Approve from another developer with write access |
+| Two approvals | Require Approve from both other developers |
 | Dismiss stale approvals | Reviewable changes require another review |
 | Resolve review discussions | Resolve all review threads before merging |
 | Squash merge | Merge each PR into main as one commit |
@@ -18,7 +18,7 @@ The active `main-team-review` ruleset targets the repository's default branch, c
 | Force-push protection | Block rewriting default-branch history |
 | Equal conditions | The bypass list is empty, including for the repository owner |
 
-Use task prefixes such as `feat/`, `fix/`, `docs/`, `infra/`, and `chore/` for new branches. Task branches support normal updates and rebase. For stacked PRs, state the base branch and merge order. After squashing an earlier PR, check the base and diff of the next PR.
+Use task prefixes such as `feat/`, `fix/`, `docs/`, `infra/`, and `chore/` for new branches. Task branches support normal updates and rebase. For stacked PRs, state the base branch and merge order. After squashing an earlier PR, retarget the next PR to `main` before merging it and check its diff; otherwise it squash-merges into the old stack branch instead of `main`.
 
 ## Automated checks
 
@@ -31,7 +31,7 @@ The infrastructure workflow from PR #1 runs for changes under `infra/**`. The au
 - Request both colleagues' input on shared rules and the initial API contract.
 - Authors report actual checks in the description. Reviewers run the scenario and submit Approve or Request changes. Use `[blocker]` and `[nit]` as described in CONTRIBUTING.md.
 
-GitHub requires one approval. For shared contract decisions, collect the affected owners' responses in the PR discussion and record the agreement in CLAUDE.md.
+Every PR needs Approve from both developers who did not author it. Request both reviewers when opening the PR. For shared contract decisions, collect the affected owners' responses in the PR discussion and record the agreement in CLAUDE.md.
 
 ## Project context and language
 

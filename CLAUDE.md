@@ -187,6 +187,7 @@ Role-specific skills listed in the original team plan follow.
 - November 14 — English is the project language for repository files, commits, PRs, and reviews. Use descriptive task prefixes for new branches, such as feat/, fix/, docs/, infra/, or chore/.
 - November 14 — Frontend stack is React, Vite, Tailwind and MapLibre with OpenFreeMap. Wikimedia Commons is the demo and fallback photo source.
 - November 14 — Work is submitted as small PRs, stacked when large. Generated files are excluded from the size budget and stay in the same PR as their manifest.
+- November 14 — Every PR needs Approve from both developers who did not author it. In a stack, retarget the next PR to main before merging it (#14 and #15 landed in stack branches and were re-landed in #21).
 
 ## Open questions and completed checks
 

@@ -14,4 +14,4 @@ Provide commands or steps, inputs, and actual results. State any outstanding che
 
 ### Review
 
-Request review from another developer with write access. For cross-service changes, choose a reviewer who owns the consuming component.
+Request review from both other developers; both approve before merge. For cross-service changes, the owner of the consuming component reviews the contract in detail.

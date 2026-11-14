@@ -37,10 +37,10 @@ Agree shared API changes with the affected developers before implementation, and
 
 ## Review and merge
 
-1. Request review from another developer with write access. For cross-service changes, choose a reviewer who owns the consuming component. Author self-checks prepare the PR for independent review.
+1. Request review from both other developers. For cross-service changes, the owner of the consuming component reviews the contract in detail. Author self-checks prepare the PR for independent review.
 2. The reviewer follows the scenario in the PR description and comments on specific lines. Mark blocking findings with `[blocker]`, including the input, consequence, and expected behavior. Mark optional improvements with `[nit]`.
 3. Use **Request changes** for blocking findings. The author fixes them, explains verification, and requests another review. Use **Approve** when the change is ready. Optional suggestions may accompany approval.
-4. After one **Approve**, resolved review threads, and successful applicable checks, the author selects **Squash and merge**. Use the PR title as the squash commit title. New reviewable changes dismiss the approval and require another review.
+4. After **Approve** from both reviewers, resolved review threads, and successful applicable checks, the author selects **Squash and merge**. Use the PR title as the squash commit title. New reviewable changes dismiss the approvals and require another review.
 
 Example findings for a map-based place filter follow.
 
