@@ -1,4 +1,4 @@
--- Exercise the freshly initialized database before retrying the extension setup.
+-- Verify that initialization enabled both extensions and their operations work.
 DO $$
 BEGIN
     IF NOT ST_Contains(
@@ -13,6 +13,3 @@ BEGIN
     END IF;
 END;
 $$;
-
-CREATE EXTENSION IF NOT EXISTS postgis;
-CREATE EXTENSION IF NOT EXISTS vector;

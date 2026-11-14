@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'infra/**'
+      - '.github/workflows/infra.yml'
 
 permissions:
   contents: read

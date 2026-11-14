@@ -9,7 +9,7 @@ docker compose --env-file .env -f infra/compose.yaml up --build --wait
 docker compose --env-file .env -f infra/compose.yaml exec -T db sh -c 'psql -X -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB"' < infra/smoke.sql
 ```
 
-The smoke test checks a spatial query and a vector distance. It fails if initialization omitted either extension or a calculation returns the wrong result. GitHub Actions runs the same SQL for PR changes under `infra/`.
+The smoke test checks a spatial query and a vector distance without changing the database. It fails if initialization omitted either extension or a calculation returns the wrong result. GitHub Actions runs the same SQL for PR changes under `infra/` or to `.github/workflows/infra.yml`.
 
 ```sh
 docker compose --env-file .env -f infra/compose.yaml down
