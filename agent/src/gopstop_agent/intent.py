@@ -14,6 +14,10 @@ class ProviderError(Exception):
     """An upstream response could not be used; never expose its body to clients."""
 
 
+class ProviderTimeout(ProviderError):
+    """A provider or internal discovery deadline elapsed."""
+
+
 class IntentClarificationRequired(Exception):
     """The caller should ask this question instead of reporting an outage."""
 
@@ -104,5 +108,7 @@ class ClaudeIntentExtractor:
                                     if any(error["loc"] == location for error in errors))
                 raise IntentClarificationRequired(question) from None
             raise ProviderError("Intent extraction returned invalid data.") from exc
+        except httpx.TimeoutException as exc:
+            raise ProviderTimeout("Intent extraction is temporarily unavailable.") from exc
         except (httpx.HTTPError, ValueError, KeyError, TypeError, AttributeError) as exc:
             raise ProviderError("Intent extraction is temporarily unavailable.") from exc

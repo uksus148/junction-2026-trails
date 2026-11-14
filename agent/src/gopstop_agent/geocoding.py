@@ -10,7 +10,7 @@ import httpx
 from pydantic import BaseModel, Field, TypeAdapter, ValidationError
 from redis.asyncio import Redis
 
-from gopstop_agent.intent import ProviderError
+from gopstop_agent.intent import ProviderError, ProviderTimeout
 
 
 OSM_ATTRIBUTION = "© OpenStreetMap contributors — https://www.openstreetmap.org/copyright"
@@ -79,7 +79,9 @@ class NominatimGeocoder:
                     # Keep one second between completion and the next uncached request.
                     # Compare the token so a timed-out worker cannot release another's gate.
                     await self._redis.eval(COOLDOWN, 1, self._gate, token)
-        except (httpx.HTTPError, TimeoutError, ValueError, TypeError) as exc:
+        except (httpx.TimeoutException, TimeoutError) as exc:
+            raise ProviderTimeout("Place geocoding is temporarily unavailable.") from exc
+        except (httpx.HTTPError, ValueError, TypeError) as exc:
             raise ProviderError("Place geocoding is temporarily unavailable.") from exc
         place = results[0] if len(results) == 1 else None
         await self._redis.set(key, cached_location.dump_json(place), ex=86400)
