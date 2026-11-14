@@ -189,12 +189,17 @@ submitted `source`, return 400 rather than being silently ignored. See the
   Both owners reviewed activation, budgets and chat behavior in #43; actual
   latency/provider/proxy budgets still need live-preflight measurement.
 
-  Mukhamed requested Groq for live integration tests. This PR adds
+  Mukhamed requested Groq for live integration tests. Merged #47 adds
   `AGENT_LLM_PROVIDER=groq`, `GROQ_API_KEY`, `AGENT_GROQ_MODEL=openai/gpt-oss-20b`
   and shared transport for all three model tasks. Anthropic remains compatible;
   no public fields change. The root example selects Groq and a 90-second discovery
   diagnostic budget; code defaults remain 60/60/180 seconds for discovery/handoff/chat.
   Activation follows [the live test guide](agent/LIVE_TEST.md) after review and E4.
+  Issue #48 reports a live Groq `resolve_place` schema failure on main `08726c3`.
+  The follow-up inlines acyclic Pydantic `$defs`/`$ref` in Groq function parameters
+  and states the nested field names explicitly. Internal typed results and public
+  contracts stay unchanged; malformed outputs still fail without writes or retries.
+  Fixture checks pass; live Groq resolution and E3/E5 must be rerun before acceptance.
 
 ### Route implementation selected by Murat
 
