@@ -1,4 +1,4 @@
-// Shared API contract. Must match "Контракт API" in /CLAUDE.md — change only together with backend.
+// Shared API contract. Must match "API contract" in /CLAUDE.md — change only together with backend.
 
 export type LatLon = { lat: number; lon: number }
 
