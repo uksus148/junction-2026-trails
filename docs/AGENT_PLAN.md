@@ -13,9 +13,10 @@ approve new endpoints, fields, tables, or Kafka event schemas.
 - PR #28 is merged: Exa text evidence with source URLs and a 24-hour Valkey cache.
 - HTTP chat still uses `{sessionId, message}` -> `{reply, places, routeId?}`.
 - Spring Boot owns persisted places, routes, uploads, SQL, and Flyway migrations.
-- [PR #27](https://github.com/uksus148/junction-2026-trails/pull/27) proposes
+- [PR #27](https://github.com/uksus148/junction-2026-trails/pull/27) is merged:
   GET /api/places, a Flyway places table, UUID IDs, and HTTP 400 Problem Details.
-  It is pending owner review; place creation and route handoff remain separate.
+  API CORS and the client header fix (#29) are merged too. Place creation and
+  route handoff remain separate.
 - Mukhamed implements the agent; Murat owns the API/storage boundary; Daniil owns
   the frontend/chat boundary. Request both teammates for each agent PR.
 
@@ -46,9 +47,10 @@ allowed until block 5. Day planning and personalization drafts remain deferred.
 These questions need the affected owners' answers, not unilateral agent changes:
 
 - **Place ingestion: Murat + Mukhamed, with Daniil reviewing consumption.**
-  `POST /api/places` currently accepts only name, lat, lon, and tags for manual
-  creation. Agree how researched source URLs and OSM identity are persisted and
-  deduplicated. Confirm API-issued identifier representation and success/error
+  The baseline specifies `POST /api/places` with name, lat, lon, and tags for
+  manual creation; the write handler is not implemented yet. Agree how researched
+  sources and OSM identity are persisted and deduplicated. Use the UUID strings
+  established by the read API; confirm write response/error and idempotency
   examples. Internal research evidence and geocoder IDs must not be sent as
   persisted `placeIds` until this mapping exists.
 - **Routing: Murat + Mukhamed + Daniil.** Keep the baseline route request and
