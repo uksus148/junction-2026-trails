@@ -33,9 +33,11 @@ ledger, environment prerequisites, diagnostic sequence and actual end-to-end evi
   validation. #43 merged runbook E2 after both owner approvals: opt-in HTTP chat,
   language-aware replies, history, bounded concurrency, stage logs and total deadline;
   172 fixture tests passed. E1 researched ingestion and E4 preflight still gate activation.
-- Independent follow-up prepared in this PR: reuse source-grounded Claude resolution
+- PR #44 merged: reuse source-grounded Claude resolution
   for 24 hours by full effective-request hash. All 202 agent fixture tests pass,
   including cache invalidation/failures and unchanged HTTP chat. Live latency is unmeasured.
+- E1 merged in #45. This PR prepares Groq, executable preflight/HTTP route acceptance
+  and agent fixture CI. Live credentials and browser evidence come from the team's machine.
 - Mukhamed implements the agent; Murat owns the API/storage boundary; Daniil owns
   the frontend/chat boundary. Request both teammates for each agent PR.
 
@@ -53,7 +55,7 @@ against current contracts. Closed PRs #23–#25 are references, not a merge queu
 | 1 | Exa text research and Valkey caching, merged in #28 and #31 | Sources retain URLs; repeated queries use a 24-hour cache; mixed-result resilience is tested |
 | 2 | Source-grounded resolution, Nominatim, and internal discovery, merged in #31 | A request yields ordered sourced findings with unique WGS84 coordinates and attribution; ambiguous/missing places stay unresolved; shared rate limits, caching, and overall deadlines are tested |
 | 3 | API ingestion and route handoff agreement, accepted in #34 | Owner approvals are linked and D1–D5 decisions/examples are published in CLAUDE.md |
-| 4 | Chat-to-route orchestration; HTTP E2 merged in #43, default disabled | Review/merge API E1, then verify persisted routes in the real frontend (E3-E5) |
+| 4 | Chat-to-route orchestration; E1/E2 merged, default disabled | Review this provider PR, pass E4, then verify persisted routes in the real frontend (E3-E5) |
 | 5 | Licensed photos along the hike | Each displayed photo has author, license, sourceUrl, and coordinates; routes/photos follow the existing units and segment shapes |
 | 6 | Gemini embeddings and pgvector ranking | Model/dimension and Flyway schema are agreed; preferences rank places/captions; repeated indexing is idempotent |
 | 7 | Kafka upload processing and EXIF | photo.uploaded payload/storage access are agreed; consumer handles missing EXIF, duplicates, retries, and nearby trail association |
@@ -68,9 +70,8 @@ These questions need the affected owners' answers, not unilateral agent changes:
 
 - **Place ingestion: Murat + Mukhamed, with Daniil reviewing consumption.**
   D1/D2 are accepted: complete provenance, selected source URL, atomic OSM type/ID
-  deduplication, first-write-wins, and authoritative API UUIDs. Murat must implement
-  the extension; the merged manual handler ignores provenance and is not usable
-  for research. The agent rejects a manual/non-URL source or an incorrect newly
+  deduplication, first-write-wins, and authoritative API UUIDs. The extension merged
+  in #45; deploy V3 before researched writes. The agent rejects a manual/non-URL source or an incorrect newly
   persisted source. No manual fallback or automatic POST retry is allowed.
 - **Routing: Murat + Mukhamed + Daniil.** D3/D4 are accepted. The internal client
   submits returned endpoint coordinates and ordered/repeated intermediate UUIDs,

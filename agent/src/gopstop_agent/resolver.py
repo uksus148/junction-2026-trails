@@ -6,7 +6,8 @@ import httpx
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from gopstop_agent.exa import ResearchSource
-from gopstop_agent.intent import Name, ProviderError, ProviderTimeout
+from gopstop_agent.intent import Name, ProviderError
+from gopstop_agent.llm import ToolModel
 
 
 class SourceResolution(BaseModel):
@@ -34,9 +35,13 @@ class ResolutionResult(BaseModel):
 
 class ClaudePlaceResolver:
     def __init__(self, client: httpx.AsyncClient, api_key: str, model: str,
-                 timeout_seconds: float = 20) -> None:
-        self._client, self._api_key, self._model = client, api_key, model
-        self._timeout = httpx.Timeout(timeout_seconds)
+                 timeout_seconds: float = 20, *, tool_model: ToolModel | None = None) -> None:
+        self._model = model
+        self._tool_model = tool_model or ToolModel(client, api_key, timeout_seconds=timeout_seconds)
+
+    @property
+    def provider(self) -> str:
+        return self._tool_model.provider
 
     def request_body(self, description: str, sources: list[ResearchSource]) -> dict:
         """Build the effective request so cached results bind to the same evidence/prompt."""
@@ -64,23 +69,10 @@ class ClaudePlaceResolver:
         if not sources:
             return None
         try:
-            response = await self._client.post(
-                "https://api.anthropic.com/v1/messages",
-                headers={"x-api-key": self._api_key, "anthropic-version": "2023-06-01"},
-                timeout=self._timeout,
-                json=self.request_body(description, sources),
-            )
-            response.raise_for_status()
-            body = response.json()
-            calls = [item for item in body["content"] if item.get("type") == "tool_use"
-                     and item.get("name") == "resolve_place"]
-            if body.get("stop_reason") != "tool_use" or len(calls) != 1:
-                raise ProviderError("Place resolution did not complete.")
-            result = ResolutionResult.model_validate(calls[0]["input"]).place
+            value = await self._tool_model.call(self.request_body(description, sources))
+            result = ResolutionResult.model_validate(value).place
             if result and result.sourceIndex >= min(len(sources), 3):
                 raise ProviderError("Place resolution selected an unknown source.")
             return result
-        except httpx.TimeoutException as exc:
-            raise ProviderTimeout("Place resolution is temporarily unavailable.") from exc
-        except (httpx.HTTPError, ValueError, KeyError, TypeError, AttributeError) as exc:
+        except (ValueError, KeyError, TypeError, AttributeError) as exc:
             raise ProviderError("Place resolution is temporarily unavailable.") from exc

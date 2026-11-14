@@ -27,9 +27,10 @@ async def build_app():
     def build(handler=None, service=None, **overrides):
         cache = fakeredis.aioredis.FakeRedis(decode_responses=True)
         http = httpx.AsyncClient(transport=httpx.MockTransport(handler or (lambda _: httpx.Response(500))))
-        settings = Settings(_env_file=None, anthropic_api_key="fixture-claude-secret", exa_api_key="fixture-exa-secret",
+        settings = Settings(_env_file=None,
                             nominatim_user_agent="TrailsTest/1.0 team@example.org", api_base_url="https://api.example",
-                            **{"chat_enabled": True, **overrides})
+                            **{"chat_enabled": True, "anthropic_api_key": "fixture-claude-secret",
+                               "exa_api_key": "fixture-exa-secret", **overrides})
         app = create_app(settings, cache, http, service)
         resources.append((http, cache))
         return app, cache, http
@@ -40,7 +41,8 @@ async def build_app():
         await cache.aclose()
 
 
-async def test_http_factories_preserve_sources_history_and_saved_route_with_safe_stage_logs(build_app, caplog):
+@pytest.mark.parametrize("provider", ["anthropic", "groq"])
+async def test_http_factories_preserve_sources_history_and_saved_route_with_safe_stage_logs(build_app, caplog, provider):
     api, provider_calls, reply_calls = ApiFixture(), [], []
     intent = {"start": "Štrbské Pleso", "end": "Rysy", "mustSee": ["Skok"], "preferences": ["wild scenery"]}
     places = {name: (name, [row(i, name, 49 + i / 1000, 20 + i / 1000)])
@@ -51,12 +53,24 @@ async def test_http_factories_preserve_sources_history_and_saved_route_with_safe
         if request.url.host == "api.example":
             return api(request)
         body = json.loads(request.content) if request.content else {}
+        if request.url.host == "api.groq.com":
+            assert provider == "groq" and request.headers["Authorization"] == "Bearer fixture-groq-secret"
+            assert body["model"] == "openai/gpt-oss-20b"
+            name = body["tool_choice"]["function"]["name"]
+            adapted = httpx.Request("POST", "https://api.anthropic.com/v1/messages", json={
+                "tool_choice": {"name": name}, "messages": body["messages"][1:],
+            })
+            result = handle(adapted).json()["content"][0]["input"]
+            return httpx.Response(200, json={"choices": [{"finish_reason": "tool_calls", "message": {
+                "tool_calls": [{"type": "function", "function": {"name": name, "arguments": json.dumps(result)}}],
+            }}]})
         if body.get("tool_choice", {}).get("name") == "write_chat_reply":
             reply_calls.append(json.loads(body["messages"][0]["content"]))
             return tool("write_chat_reply", {"reply": "Маршрут через водопад готов."})
         return providers(request)
 
-    app, cache, http = build_app(handle)
+    app, cache, http = build_app(handle, llm_provider=provider, groq_api_key="fixture-groq-secret",
+                                 anthropic_api_key="" if provider == "groq" else "fixture-claude-secret")
     with caplog.at_level(logging.INFO, logger="gopstop_agent.diagnostics"), TestClient(app) as client:
         for message in ("Хочу маршрут через Skok", "Оставь тот же водопад"):
             response = client.post("/api/chat", headers={"Origin": "http://localhost:5173"},
@@ -215,13 +229,16 @@ async def test_corrupt_history_stops_before_paid_work(build_app, value):
     search.discover.assert_not_awaited()
 
 
-@pytest.mark.parametrize("field", ["anthropic_api_key", "exa_api_key", "anthropic_model"])
-def test_enabled_production_factory_rejects_missing_keys_before_resources(monkeypatch, field):
+@pytest.mark.parametrize("provider,key,model", [("anthropic", "anthropic_api_key", "anthropic_model"),
+                                              ("groq", "groq_api_key", "groq_model")])
+@pytest.mark.parametrize("missing", ["key", "exa", "model"])
+def test_enabled_production_factory_rejects_missing_keys_before_resources(monkeypatch, provider, key, model, missing):
     import gopstop_agent.main as main
     factory = Mock()
     monkeypatch.setattr(main, "from_url", factory)
-    values = {"anthropic_api_key": "fixture", "exa_api_key": "fixture", "anthropic_model": "model", field: " "}
-    with pytest.raises(ValueError, match="requires Claude/Exa"):
+    values = {"llm_provider": provider, key: "fixture", "exa_api_key": "fixture", model: "model",
+              {"key": key, "exa": "exa_api_key", "model": model}[missing]: " "}
+    with pytest.raises(ValueError, match="requires the selected LLM key"):
         with TestClient(create_app(Settings(_env_file=None, chat_enabled=True, **values))):
             pass
     factory.assert_not_called()

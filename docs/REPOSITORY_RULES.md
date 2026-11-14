@@ -24,6 +24,9 @@ Use task prefixes such as `feat/`, `fix/`, `docs/`, `infra/`, and `chore/` for n
 
 The infrastructure workflow from PR #1 runs for changes under `infra/**`. The author and reviewer check applicable CI results before merging. Required status checks are currently empty in the ruleset because the existing workflow runs conditionally. Add a required status only when it produces a final result for every PR into main.
 
+The agent workflow runs frozen Python fixture tests and compilation on agent/configuration
+changes. It uses no live provider credentials; live acceptance remains an explicit team run.
+
 ## Assigning reviews
 
 Every PR requires review and at least one approval from a developer other than its author, including internal changes that affect no other component. When no affected owner other than the author exists, explicitly request another developer with the closest relevant expertise.

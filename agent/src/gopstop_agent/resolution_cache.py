@@ -1,4 +1,4 @@
-"""Reuse source-grounded resolutions only for identical effective Claude requests."""
+"""Reuse source-grounded resolutions only for identical provider/model requests."""
 
 import hashlib
 import json
@@ -23,7 +23,8 @@ class CachedPlaceResolver:
             return None
         # Covers model, prompt/schema and ordered evidence, without credentials or session IDs.
         request = self._resolver.request_body(description, sources)
-        digest = hashlib.sha256(json.dumps(request, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
+        identity = {"provider": self._resolver.provider, "request": request}
+        digest = hashlib.sha256(json.dumps(identity, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
         key = f"gopstop:place-resolution:v1:{digest}"
         cached = await self._cache.get(key)
         if cached is not None:

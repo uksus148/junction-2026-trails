@@ -54,13 +54,14 @@ Run automated tests with `pytest`.
 
 ## Enable orchestration after integration preflight
 
-E2 merged in #43 with both reviewers' approvals. Keep `AGENT_CHAT_ENABLED=false`
-until researched ingestion (runbook E1) is reviewed/merged and E4 confirms credentials, model,
-cache and service connectivity. Then set it to `true` in the root `.env` and restart.
+E1/E2 merged in #45/#43. Keep `AGENT_CHAT_ENABLED=false` until this provider PR is
+reviewed/merged and E4 confirms the selected model, keys and service connectivity.
+Follow [the executable Groq preflight and HTTP end-to-end guide](LIVE_TEST.md),
+then enable chat for E3/E5. This PR's tests do not certify the team's live credentials.
 The manual place handler is not a research fallback or capability probe.
 See the [shared runbook](../docs/INTEGRATION_RUNBOOK.md) for the remaining gates.
 
-Enabled startup checks that Claude/Exa keys and the model ID are nonblank; it makes
+Enabled startup checks the selected LLM/Exa keys and model ID are nonblank; it makes
 no provider requests and cannot prove account/model availability. Managed HTTP and
 Valkey clients close on shutdown or failed startup. `create_app` accepts injected
 clients/service for fixtures; the caller retains ownership of injected resources.
@@ -82,7 +83,7 @@ session IDs. These are internal diagnostics, not new public response fields.
 
 ## Intent extraction
 
-`ClaudeIntentExtractor` uses Claude tool use and validates the internal
+`ClaudeIntentExtractor` validates tool use through shared `ToolModel` and the internal
 `{start, end, mustSee[], preferences[]}` result. It accepts recent session history,
 keeps unknown endpoints null, and never asks the model for coordinates. The
 adapter is connected through opt-in chat. Tests use HTTP fixtures, never live providers.
@@ -94,9 +95,10 @@ Chat phrases that question as a normal reply rather than reporting a provider
 outage; valid stops are not silently discarded. Transport, HTTP, and malformed
 responses remain `ProviderError`; typed `ProviderTimeout` maps to 504.
 
-Set `ANTHROPIC_API_KEY` in the root `.env`. `AGENT_ANTHROPIC_MODEL` follows the
-team-plan default `claude-haiku-5-5`; select a model available to the team's account
-before live testing. Each extractor request has a 20-second timeout by default;
+Set `AGENT_LLM_PROVIDER=groq`, `GROQ_API_KEY` and `AGENT_GROQ_MODEL` for Groq.
+Only the selected provider key is required. Anthropic retains its existing settings;
+historical `Claude*` class names remain compatible while transport selects the provider.
+Each network request has a 20-second timeout by default;
 its `timeout_seconds` argument overrides the supplied HTTP client's timeouts.
 `AGENT_PROVIDER_TIMEOUT_SECONDS` supplies the setting for chat adapters.
 No automatic paid retries are performed. Live account/model availability has not
@@ -122,7 +124,7 @@ agreements required before API persistence and route integration.
 ## Source-grounded place discovery
 
 `create_discovery(client, cache, settings)` builds `PlaceDiscovery` using the root
-settings and validates the Claude/Exa keys when explicitly enabled by a caller.
+settings and validates the selected LLM/Exa keys when explicitly enabled by a caller.
 `await discovery.discover(message, history)` runs intent, Exa, Claude place
 resolution, and Nominatim as one bounded internal pipeline. The default total
 deadline is 60 seconds (`AGENT_DISCOVERY_TIMEOUT_SECONDS`); provider timeouts use
@@ -138,7 +140,7 @@ all unfinished chains are cancelled and joined on failure or cancellation.
 
 `CachedPlaceResolver` wraps Claude resolution in the production discovery factory.
 Valkey retains validated results, including unresolved results, for 24 hours.
-The versioned SHA-256 key covers the effective request: model, prompt/tool schema,
+The versioned SHA-256 key covers provider and effective request: model, prompt/tool schema,
 description and ordered source titles, URLs and text (only the three sent to Claude).
 Changing any of those inputs requires a new resolution; credentials and session IDs
 are excluded. Cache values contain only the typed resolution or null, never the
@@ -190,15 +192,14 @@ Root settings: `AGENT_API_BASE_URL` defaults to `http://localhost:8080`;
 `AGENT_HANDOFF_TIMEOUT_SECONDS` to 60 seconds for ingestion/create/readback together.
 This internal deadline runs within the total chat deadline described above.
 
-The factory is composed by opt-in chat. Routes/cache are merged in #39/#41; place
-creation is still manual-only. Its ignored provenance/server-owned manual source
-is rejected by this client. That rejection cannot undo an already committed place. Enable live use
-only after researched ingestion and the required routing cache are reviewed;
-this client is not a capability probe. Tests use HTTP fixtures, including repeats,
+The factory is composed by opt-in chat. Routes/cache merged in #39/#41 and researched
+ingestion in #45; deploy that API/V3 before use. This client is not a capability probe.
+Tests use HTTP fixtures, including repeats,
 direct hikes, first-write replay, incomplete intent, provider/storage failures,
 malformed responses, possible partial writes, and cancellation. HTTP chat tests
 cover language/history, saved-route publication, failures, and every deadline stage.
-The full agent suite passes 202 fixture tests. In two same-input discoveries/chat
+The Groq/Anthropic fixture suite and opt-in smoke runner are checked in agent CI.
+In two same-input discoveries/chat
 requests, the three places require three resolution calls total, rather than six;
 history, canonical places and saved-route readback still pass. This is call-count
 evidence, not a measured live speedup. Live API/ORS, actual model language behavior,

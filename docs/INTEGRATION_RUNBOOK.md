@@ -3,8 +3,7 @@
 This is the shared execution and diagnostic guide for Murat, Mukhamed, and Daniil.
 Read it before changing a service boundary, preparing an integration environment,
 or reporting an end-to-end result. Last checked: November 14, 2026, against
-`main` at `440f69d` (merged #39-#44). E1 below is [PR #45](https://github.com/uksus148/trego./pull/45),
-`feat/sourced-place-ingestion`, rebased onto that main; it is not merged. The live API
+`main` at `411adfe` (through merged #45), plus the Groq integration PR under review. The live API
 check ran before rebase; the agent session check used an isolated `b51e4d0` snapshot.
 
 ## Authority and keeping the team aligned
@@ -38,19 +37,29 @@ Replace pending evidence with a PR/run link and tested revision; retain useful h
 | B3 | Discovery and internal API handoff | Mukhamed | Merged internally | #31, #40; fixtures do not enable HTTP chat |
 | B4 | Frontend route/source/error compatibility | Daniil | Merged | #35-#37; live browser acceptance pending |
 | B5 | Reuse source-grounded Claude resolutions | Mukhamed | Merged | [#44](https://github.com/uksus148/trego./pull/44), main `440f69d`; 202 agent fixture tests; live latency unmeasured |
-| E1 | Researched place ingestion and OSM deduplication | Murat | Implemented; awaiting independent review | [#45](https://github.com/uksus148/trego./pull/45); [185 API tests and real-client smoke](../api/INGESTION.md); affected-owner review pending |
-| E2 | HTTP chat orchestration and total deadline | Mukhamed | Merged; default disabled | [#43](https://github.com/uksus148/trego./pull/43), both approvals at `b83382d`, merged as `b51e4d0`; E1 and live Claude/Exa access block activation |
+| B6 | Groq GPT OSS 20B and executable live checks | Mukhamed | Review follow-up | [#47](https://github.com/uksus148/trego./pull/47): 236 fixture tests; Tatras timing and team-machine/browser evidence pending |
+| E1 | Researched place ingestion and OSM deduplication | Murat | Merged | [#45](https://github.com/uksus148/trego./pull/45), both approvals; deploy V3 on the selected target |
+| E2 | HTTP chat orchestration and total deadline | Mukhamed | Merged; default disabled | [#43](https://github.com/uksus148/trego./pull/43); this PR prepares selected Groq transport and live checks |
 | E3 | Real-service frontend verification | Daniil | Pending | Disable mocks; verify direct/chat routes, sources, markers and errors |
-| E4 | Integration environment and credentials | Murat coordinates; all owners verify clients | Backend Aiven/ORS preflight passed; AI access pending | [Live evidence](#e4-live-backend-evidence); Claude/Exa keys and account/model access still need Mukhamed; shared-schema deployment remains gated by E1 review |
+| E4 | Integration environment and credentials | Murat coordinates; all owners verify clients | Backend Aiven/ORS preflight passed; selected LLM/Exa pending | [Live evidence](#e4-live-backend-evidence); run the new preflight on the team's machine and confirm deployed V3 |
 | E5 | Full Tatras workflow | All three | Not run | Complete the acceptance matrix below on a recorded revision |
 
 Before E1, the merged manual endpoint ignored provenance and assigned `source: "manual"`;
 the agent rejected that response after a possible committed write. E1 removes this mismatch
-in its implementation branch; enable the shared live flow only after review/merge. Invalid
+in merged #45; deploy reviewed V3 and pass E4 before enabling the live flow. Invalid
 provenance must never fall back to manual creation.
 The working branch incorporates #43 and #44. Compatibility evidence includes agent
 fixture tests and a real Python handoff -> Spring/local data services smoke with fixture ORS.
 This does not activate live chat or complete E5.
+
+Follow [the Groq live test guide](../agent/LIVE_TEST.md): reviewed code/V3 -> explicit
+`python -m gopstop_agent.smoke` preflight -> enable/restart chat -> `smoke --chat` -> browser.
+The preflight validates three tool tasks, a real Exa cache miss, Nominatim, sessions and
+read-only API access. The HTTP route check verifies CORS, sourced Places, saved GET and
+stored exchange. These are opt-in live operations; CI exercises fixtures without credentials.
+Keys are only on the team's machine, so this PR claims no new live E4/E5 pass.
+Local evidence: 236 agent fixture tests pass, including Groq/Anthropic HTTP orchestration,
+quota cancellation, provider-separated caching and the smoke runner's acceptance failures.
 
 ## Implementation responsibilities and merge gates
 
@@ -153,7 +162,8 @@ secret examples. The table below is a configuration checklist, not a file contai
 | `ORS_API_KEY` | Valid server-side key; Murat |
 | `ORS_BASE_URL` | Existing configured ORS endpoint; Murat verifies access |
 | `ORS_CONNECT_TIMEOUT`, `ORS_READ_TIMEOUT` | Existing defaults `5s`, `20s`; Murat |
-| `ANTHROPIC_API_KEY`, `EXA_API_KEY` | Valid private keys; Mukhamed |
+| `AGENT_LLM_PROVIDER`, `GROQ_API_KEY`, `AGENT_GROQ_MODEL` | Groq profile: `groq`, private key, `openai/gpt-oss-20b`; Mukhamed |
+| `ANTHROPIC_API_KEY`, `EXA_API_KEY` | Anthropic key only if selected; Exa always required for discovery |
 | `AGENT_ANTHROPIC_MODEL` | Account-verified model ID; current default has no live verification |
 | `AGENT_NOMINATIM_USER_AGENT` | Existing identifying team value; Mukhamed |
 | `AGENT_API_BASE_URL` | `http://localhost:8080` |
@@ -190,7 +200,7 @@ and persistence overhead. Review this budget before live activation:
 | Setting | Current value | Proposed diagnostic value | Status |
 |---|---|---|---|
 | `AGENT_API_TIMEOUT_SECONDS` | 20 | 30 | Supported setting; proposal, not applied |
-| `AGENT_DISCOVERY_TIMEOUT_SECONDS` | 60 | 90 | Supported setting; proposal, not applied |
+| `AGENT_DISCOVERY_TIMEOUT_SECONDS` | Code 60; Groq example 90 | 90 | This PR applies the diagnostic example for quota waits; review required |
 | `AGENT_HANDOFF_TIMEOUT_SECONDS` | 60 | 60 | Existing supported setting |
 | `AGENT_CHAT_TIMEOUT_SECONDS` | 180 | 180 | Merged in #43; live latency/proxy budget still needs preflight |
 
@@ -325,6 +335,6 @@ This deliberately records two revisions; it is not same-main E5 acceptance.
 The redacted local report is `api/target/e4-live-report.json` (ignored generated output).
 Private credentials and certificate paths stay in the ignored root `.env`; no keys are
 published. Backend connectivity/cache/ORS are verified. E4 as a whole still requires
-Claude/Exa credentials and verified model/account access. Leave `AGENT_CHAT_ENABLED=false`
-until reviewed E1 is merged and those checks pass. The publication branch includes #43/#44.
+selected LLM/Exa credentials and verified model/account access. Leave `AGENT_CHAT_ENABLED=false`
+until reviewed provider code/V3 is deployed and those checks pass. E1/E2 are merged.
 E3 browser acceptance and the full sourced Tatras E5 workflow remain pending.

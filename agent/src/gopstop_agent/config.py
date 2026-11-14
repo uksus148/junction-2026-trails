@@ -1,6 +1,7 @@
 """Environment-backed service configuration."""
 
 from pathlib import Path
+from typing import Literal
 
 from pydantic import AliasChoices, Field, HttpUrl, RedisDsn, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -27,6 +28,9 @@ class Settings(BaseSettings):
     anthropic_api_key: SecretStr = Field(default="", validation_alias="ANTHROPIC_API_KEY")
     exa_api_key: SecretStr = Field(default="", validation_alias="EXA_API_KEY")
     anthropic_model: str = "claude-haiku-5-5"
+    llm_provider: Literal["anthropic", "groq"] = "anthropic"
+    groq_api_key: SecretStr = Field(default="", validation_alias="GROQ_API_KEY")
+    groq_model: str = "openai/gpt-oss-20b"
     provider_timeout_seconds: float = Field(default=20, gt=0, le=60)
     discovery_timeout_seconds: float = Field(default=60, gt=0, le=180)
     api_base_url: HttpUrl = "http://localhost:8080"
@@ -36,6 +40,18 @@ class Settings(BaseSettings):
     handoff_timeout_seconds: float = Field(default=60, gt=0, le=180)
     nominatim_base_url: HttpUrl = "https://nominatim.openstreetmap.org"
     nominatim_user_agent: str = Field(
-        default="trego/0.1 (https://github.com/uksus148/trego)",
+        default="trego/0.1 (contact: https://github.com/uksus148/trego./issues)",
         min_length=8,
     )
+
+    @property
+    def llm_key(self) -> SecretStr:
+        return self.groq_api_key if self.llm_provider == "groq" else self.anthropic_api_key
+
+    @property
+    def llm_model(self) -> str:
+        return self.groq_model if self.llm_provider == "groq" else self.anthropic_model
+
+    def require_chat_configuration(self) -> None:
+        if not self.llm_key.get_secret_value().strip() or not self.llm_model.strip() or not self.exa_api_key.get_secret_value().strip():
+            raise ValueError("Enabled chat requires the selected LLM key, EXA_API_KEY and a model ID.")
