@@ -11,6 +11,9 @@ approve new endpoints, fields, tables, or Kafka event schemas.
 - PR #26 is merged: Claude hiking intent, recent history, validation, and
   clarification for excessive stops/preferences. Live Claude remains unverified.
 - PR #28 is merged: Exa text evidence with source URLs and a 24-hour Valkey cache.
+- PR #31 is merged after both teammates approved: source-grounded resolution,
+  cached/rate-limited Nominatim, and bounded internal discovery. All 80 tests pass
+  with fixtures; HTTP discovery and live geographic accuracy remain unverified.
 - HTTP chat still uses `{sessionId, message}` -> `{reply, places, routeId?}`.
 - Spring Boot owns persisted places, routes, uploads, SQL, and Flyway migrations.
 - [PR #27](https://github.com/uksus148/junction-2026-trails/pull/27) is merged:
@@ -23,16 +26,17 @@ approve new endpoints, fields, tables, or Kafka event schemas.
 ## Sequential blocks
 
 Finish review, fixes, applicable checks, and merge before starting another block.
-Create branches from current main. The current discovery increment combines the
-provider and orchestration blocks in one PR below 1000 hand-written changed lines,
-as Mukhamed requested. Reuse preserved work after checking its diff
+Create branches from current main. Mukhamed authorized combining coherent blocks
+into PRs below 1000 changed lines to accelerate delivery; #31 combined providers
+and internal orchestration in 766 changed lines including tests/docs. Review each
+PR before starting the next. Reuse preserved work after checking its diff
 against current contracts. Closed PRs #23–#25 are references, not a merge queue.
 
 | Order | Block | Done when |
 |---|---|---|
-| 1 | Exa text research and Valkey caching, merged in #28 | Sources retain URLs; repeated queries use a 24-hour cache; mixed-result resilience is included in the current discovery increment |
-| 2 | Source-grounded resolution, Nominatim, and internal discovery, prepared in this PR | A request yields ordered sourced findings with unique WGS84 coordinates and attribution; ambiguous/missing places stay unresolved; shared rate limits, caching, and overall deadlines are tested |
-| 3 | API ingestion and route handoff agreement | Murat, Mukhamed, and Daniil review example payloads, provenance, identifiers, ordering, and errors; accepted decisions are recorded in CLAUDE.md |
+| 1 | Exa text research and Valkey caching, merged in #28 and #31 | Sources retain URLs; repeated queries use a 24-hour cache; mixed-result resilience is tested |
+| 2 | Source-grounded resolution, Nominatim, and internal discovery, merged in #31 | A request yields ordered sourced findings with unique WGS84 coordinates and attribution; ambiguous/missing places stay unresolved; shared rate limits, caching, and overall deadlines are tested |
+| 3 | API ingestion and route handoff agreement, proposed in [the handoff document](AGENT_API_HANDOFF.md) | Murat, Mukhamed, and Daniil explicitly accept or amend D1–D5; accepted decisions are recorded in CLAUDE.md before implementation |
 | 4 | Chat-to-route orchestration | Intent, research, geocoding, API persistence, and routing follow the agreed contract; frontend fetches and displays the returned persisted route |
 | 5 | Licensed photos along the hike | Each displayed photo has author, license, sourceUrl, and coordinates; routes/photos follow the existing units and segment shapes |
 | 6 | Gemini embeddings and pgvector ranking | Model/dimension and Flyway schema are agreed; preferences rank places/captions; repeated indexing is idempotent |

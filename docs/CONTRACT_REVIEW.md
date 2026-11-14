@@ -29,6 +29,15 @@ Connect the original chat, places, and route flow to live services first. Discus
 
 Before implementing the relevant HTTP handlers, the backend will propose identifier types, success and error status codes, and the photo upload response in a dedicated PR. Review those details with the frontend and agent.
 
+## Proposed hiking route handoff after PR #31
+
+[The agent/API handoff proposal](AGENT_API_HANDOFF.md) supplies concrete examples
+for optional research provenance on place creation, OSM deduplication into API
+UUIDs, ordered route persistence, machine-readable errors, and chat completion.
+It is awaiting explicit agreement from Murat and Daniil; no new write endpoint
+behavior or schema is approved by that document alone. The merged read API's
+UUID strings and the original public Place/Route/chat shapes remain the baseline.
+
 ## Recording agreement
 
 Daniil and Mukhamed respond in the PR containing this document or propose a CLAUDE.md edit. Include affected fields, an implementation owner, and an example request or response. Move the agreement into CLAUDE.md, update types and mocks, and verify an end-to-end request. Reconcile differences in PR #3 against Murat's published baseline.
