@@ -77,10 +77,42 @@ been verified.
 up to three results, preserves source URLs, and caches successful responses,
 including empty results, in Valkey for 24 hours. Cache keys hash the full search
 request. Missing titles fall back to the source URL; missing text becomes empty.
-Corrupt cache entries are refreshed. A cache outage prevents an uncached paid call.
-Provider errors are not cached or retried, and request timeouts are explicit.
+Mixed responses keep the valid sources; a non-empty response with no usable
+source is a provider error. Corrupt cache entries are refreshed. A failed cache
+read stops before Exa. A failed cache write propagates after Exa has already
+consumed credits; the adapter does not retry the call. Provider errors are not
+cached or retried, and request timeouts are explicit.
 
 `EXA_API_KEY` loads from the root `.env` as a masked secret. The adapter is not yet
 wired into HTTP chat and does not create API place IDs or infer photo licensing.
 See [the delivery plan](../docs/AGENT_PLAN.md) for the next blocks and the owner
 agreements required before API persistence and route integration.
+
+## Source-grounded place discovery
+
+`create_discovery(client, cache, settings)` builds `PlaceDiscovery` using the root
+settings and validates the Claude/Exa keys when explicitly enabled by a caller.
+`await discovery.discover(message, history)` runs intent, Exa, Claude place
+resolution, and Nominatim as one bounded internal pipeline. The default total
+deadline is 60 seconds (`AGENT_DISCOVERY_TIMEOUT_SECONDS`); provider timeouts use
+`AGENT_PROVIDER_TIMEOUT_SECONDS`. Tests do not call live providers.
+
+The result retains start/end findings, ordered stops, all research sources, and
+the selected source with each uniquely geocoded place. `unresolved` and
+`missing_endpoints` support clarification; `ready_for_handoff` is false while any
+required location is missing. Repeated targets reuse work without removing visits.
+`IntentClarificationRequired` propagates before research for over-limit intent.
+
+Nominatim results, including empty/ambiguous ones, are cached for 24 hours. A
+shared Valkey token gate holds through each request and for one second after it
+finishes, including errors. Waiting has a deadline; ownership checks prevent an
+expired worker from changing another's gate. Set `AGENT_NOMINATIM_USER_AGENT` to
+identify the team; `AGENT_NOMINATIM_BASE_URL` can select a hosted service. Display
+the returned OSM attribution when using these coordinates.
+
+This is an internal result, not an API `Place`: it has OSM type/ID and source
+evidence, but no persisted UUID or routeId. The factory does not run at application
+startup yet; HTTP chat behavior is unchanged. API ingestion and route handoff
+remain behind owner agreement. At chat wiring, use the user's message language
+for normal and clarification replies, as agreed with Daniil in PR #28; UI labels
+remain English.
