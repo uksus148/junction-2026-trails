@@ -2,7 +2,7 @@
 
 Use one worker and one tester initially. Follow the accepted D1-D5 contract and
 [runbook](../docs/INTEGRATION_RUNBOOK.md). E1/E2 merged in #45/#43; deploy reviewed
-code and Flyway V3. This PR adds Groq; actual access remains a team-machine check.
+code and Flyway V3. #47 added Groq; actual access remains a team-machine check.
 
 ## Configure the root environment
 
@@ -43,7 +43,7 @@ API GET. It deletes only its own temporary keys. Old Exa cache hits cannot valid
 bad key. Exit 0 / `status: passed` confirms these checks, not V3 or browser acceptance.
 Ambiguous geocoding is reported separately. Reports omit keys, messages and provider bodies.
 
-After this PR is reviewed/merged, the API is migrated and E4 passes on the team's machine,
+After the provider/schema fixes are reviewed/merged, the API is migrated and E4 passes on the team's machine,
 set `AGENT_CHAT_ENABLED=true` in root `.env` and start/restart the agent:
 
 For Groq free limits, allow at least a minute after preflight for tokens to replenish;
@@ -84,3 +84,28 @@ Record main SHA, reports and browser evidence before marking E3/E5 complete.
 Several model calls share Groq's free token budget. The per-worker transport serializes
 calls and waits conservatively on quota headers; it does not retry 429 or coordinate
 other workers/accounts. Actual limits/latency need measurement. CI uses fixtures only.
+
+## Recheck issue #48
+
+Main `08726c3` fails live `resolve_place` with Groq 400 `tool_use_failed`.
+The fix sends an inline nullable object schema with `name`, `geocodeQuery`,
+`sourceIndex` and `tags`, instead of a `$ref` to `SourceResolution`. A supported
+tool result still has this shape (names/query must come from supplied evidence):
+
+```json
+{"place":{"name":"Skok waterfall","geocodeQuery":"Skok waterfall, High Tatras, Slovakia","sourceIndex":0,"tags":["waterfall"]}}
+```
+
+After review, deploy the fix, restart the agent and record the tested commit.
+Keep `AGENT_GROQ_MODEL=openai/gpt-oss-20b`. Repeat the preflight above: it calls
+resolution directly, without the shared resolution cache. `checks` must include
+`llm_resolution`; a failed run at that stage remains a blocker. `place:null` is a
+valid unresolved response, so a passing preflight alone does not prove location accuracy.
+Do not flush shared caches: the changed prompt already invalidates old resolution keys.
+
+After quota replenishes, repeat the short chat smoke, then the full Tatras command
+and Daniil's browser matrix. Record status, stage, elapsedMs, created IDs and revision;
+keep raw provider errors/keys out of public reports. The separate ORS no-route result
+for Rysy is tracked in [#49](https://github.com/uksus148/trego./issues/49) and needs
+Murat's investigation. Popradské Pleso is a useful control hike,
+but success there does not complete the required Tatras acceptance.

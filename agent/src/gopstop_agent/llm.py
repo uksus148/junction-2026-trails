@@ -18,6 +18,30 @@ class ProviderTimeout(ProviderError):
     """A provider or internal discovery deadline elapsed."""
 
 
+def inline_tool_schema(schema: dict) -> dict:
+    """Expand acyclic Pydantic definitions for Groq's function parameters."""
+    definitions = schema.get("$defs", {})
+
+    def expand(value, active=()):
+        if isinstance(value, list):
+            return [expand(item, active) for item in value]
+        if not isinstance(value, dict):
+            return value
+        siblings = {key: expand(item, active) for key, item in value.items()
+                    if key not in ("$defs", "$ref")}
+        if "$ref" not in value:
+            return siblings
+        ref = value["$ref"]
+        if not isinstance(ref, str) or not ref.startswith("#/$defs/") or ref in active:
+            raise ValueError("Unsupported or recursive tool schema reference.")
+        definition = definitions[ref.removeprefix("#/$defs/")]
+        resolved = expand(definition, (*active, ref))
+        # A $ref and its sibling constraints both apply; do not overwrite either.
+        return {"allOf": [resolved, siblings]} if siblings else resolved
+
+    return expand(schema)
+
+
 class ToolModel:
     def __init__(self, client: httpx.AsyncClient, key: str, provider: str = "anthropic",
                  timeout_seconds: float = 20) -> None:
@@ -37,7 +61,7 @@ class ToolModel:
                     "messages": [{"role": "system", "content": body["system"]}, *body["messages"]],
                     "tools": [{"type": "function", "function": {
                         "name": tool["name"], "description": tool["description"],
-                        "parameters": tool["input_schema"],
+                        "parameters": inline_tool_schema(tool["input_schema"]),
                     }} for tool in body["tools"]],
                     "tool_choice": {"type": "function", "function": {"name": name}},
                     "parallel_tool_calls": False,

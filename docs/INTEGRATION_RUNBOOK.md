@@ -3,7 +3,7 @@
 This is the shared execution and diagnostic guide for Murat, Mukhamed, and Daniil.
 Read it before changing a service boundary, preparing an integration environment,
 or reporting an end-to-end result. Last checked: November 14, 2026, against
-`main` at `411adfe` (through merged #45), plus the Groq integration PR under review. The live API
+`main` at `08726c3` (through merged #47), plus the #48 schema fix prepared for review. The live API
 check ran before rebase; the agent session check used an isolated `b51e4d0` snapshot.
 
 ## Authority and keeping the team aligned
@@ -37,12 +37,13 @@ Replace pending evidence with a PR/run link and tested revision; retain useful h
 | B3 | Discovery and internal API handoff | Mukhamed | Merged internally | #31, #40; fixtures do not enable HTTP chat |
 | B4 | Frontend route/source/error compatibility | Daniil | Merged | #35-#37; live browser acceptance pending |
 | B5 | Reuse source-grounded Claude resolutions | Mukhamed | Merged | [#44](https://github.com/uksus148/trego./pull/44), main `440f69d`; 202 agent fixture tests; live latency unmeasured |
-| B6 | Groq GPT OSS 20B and executable live checks | Mukhamed | Review follow-up | [#47](https://github.com/uksus148/trego./pull/47): 236 fixture tests; Tatras timing and team-machine/browser evidence pending |
+| B6 | Groq GPT OSS 20B and executable live checks | Mukhamed | Merged; live resolution blocked | [#47](https://github.com/uksus148/trego./pull/47), main `08726c3`: 236 fixture tests; Daniil reported #48 during live testing |
+| B7 | Inline Groq tool schema for #48 | Mukhamed | Prepared for review; live rerun pending | [#48](https://github.com/uksus148/trego./issues/48); 246 fixture tests; request Murat and Daniil, then rerun live resolution/browser matrix |
 | E1 | Researched place ingestion and OSM deduplication | Murat | Merged | [#45](https://github.com/uksus148/trego./pull/45), both approvals; deploy V3 on the selected target |
-| E2 | HTTP chat orchestration and total deadline | Mukhamed | Merged; default disabled | [#43](https://github.com/uksus148/trego./pull/43); this PR prepares selected Groq transport and live checks |
-| E3 | Real-service frontend verification | Daniil | Pending | Disable mocks; verify direct/chat routes, sources, markers and errors |
-| E4 | Integration environment and credentials | Murat coordinates; all owners verify clients | Backend Aiven/ORS preflight passed; selected LLM/Exa pending | [Live evidence](#e4-live-backend-evidence); run the new preflight on the team's machine and confirm deployed V3 |
-| E5 | Full Tatras workflow | All three | Not run | Complete the acceptance matrix below on a recorded revision |
+| E2 | HTTP chat orchestration and total deadline | Mukhamed | Merged; default disabled | [#43](https://github.com/uksus148/trego./pull/43); #47 adds selected Groq transport and live checks |
+| E3 | Real-service frontend verification | Daniil | Attempted; blocked by #48 | Rerun with reviewed schema fix; verify direct/chat routes, sources, markers and errors |
+| E4 | Integration environment and credentials | Murat coordinates; all owners verify clients | Backend preflight passed; live intent/research passed; Groq resolution failed | [Live evidence](#e4-live-backend-evidence), [#48](https://github.com/uksus148/trego./issues/48); repeat agent preflight after the fix |
+| E5 | Full Tatras workflow | All three | Attempted; not accepted | #48 resolution failure and [#49](https://github.com/uksus148/trego./issues/49) ORS/Rysy failure; complete the acceptance matrix on a recorded revision |
 
 Before E1, the merged manual endpoint ignored provenance and assigned `source: "manual"`;
 the agent rejected that response after a possible committed write. E1 removes this mismatch
@@ -57,9 +58,36 @@ Follow [the Groq live test guide](../agent/LIVE_TEST.md): reviewed code/V3 -> ex
 The preflight validates three tool tasks, a real Exa cache miss, Nominatim, sessions and
 read-only API access. The HTTP route check verifies CORS, sourced Places, saved GET and
 stored exchange. These are opt-in live operations; CI exercises fixtures without credentials.
-Keys are only on the team's machine, so this PR claims no new live E4/E5 pass.
-Local evidence: 236 agent fixture tests pass, including Groq/Anthropic HTTP orchestration,
-quota cancellation, provider-separated caching and the smoke runner's acceptance failures.
+Keys are only on the team's machine, so this fix claims no new live E4/E5 pass.
+Local evidence: 246 agent fixture tests pass, including Groq/Anthropic HTTP orchestration,
+inline schema constraints, quota cancellation, provider-separated caching and safe
+rejection of the invalid resolution examples reported in #48 without ingestion/session writes.
+
+### Live blockers reported in #48 and #49
+
+Daniil ran main `08726c3` with real Aiven PostgreSQL/Valkey, ORS, Groq and Exa,
+enabled chat and frontend mocks off. The Tatras request returned 502 after successful
+intent/research. Groq returned 400 `tool_use_failed` for resolution; the one-source
+Skok probe failed 3/3 on each GPT OSS model (20B and 120B). The generated arguments
+used a string `place` or invented `canonicalName`/`region` fields. This is reported
+team-machine evidence, not a live run performed in the fixture workspace.
+
+The fix expands acyclic local schema definitions only for Groq and explicitly names
+the nested fields. It retains `place: SourceResolution | null`, source-index bounds,
+unknown-field rejection, timeouts and no-retry behavior. The revised resolver prompt
+also changes the existing full-request cache hash; do not flush shared Valkey keys.
+After review/deployment, rerun the [preflight and chat checks](../agent/LIVE_TEST.md#recheck-issue-48)
+with `openai/gpt-oss-20b` and record revision, safe reports and elapsed time.
+
+Separately, [#49](https://github.com/uksus148/trego./issues/49), assigned to Murat,
+reports ORS code 2010 (no routable point within 350 m) for Rysy/Chata pod Rysmi.
+The API currently maps both 2009 and 2010 to 422 `no_hiking_route`.
+Štrbské Pleso -> Skok and -> Popradské Pleso return 201 / 4.6 km and 5.7 km;
+an unlimited snap radius produces a 69 km detour and is not an accepted fix.
+Murat investigates the provider/waypoint boundary. This agent fix retains current
+D4 handling: do not replace geometry, drop Skok or silently substitute an endpoint.
+New error codes, snap behavior or a changed required demo need affected-owner
+agreement in CLAUDE.md. A successful control hike is not Tatras E5 acceptance.
 
 ## Implementation responsibilities and merge gates
 

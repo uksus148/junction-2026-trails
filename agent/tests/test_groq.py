@@ -1,12 +1,13 @@
 import asyncio
 import json
+from copy import deepcopy
 
 import fakeredis.aioredis
 import httpx
 import pytest
 
 from gopstop_agent.config import Settings
-from gopstop_agent.llm import ProviderError, ProviderTimeout, ToolModel
+from gopstop_agent.llm import ProviderError, ProviderTimeout, ToolModel, inline_tool_schema
 from gopstop_agent.resolution_cache import CachedPlaceResolver
 from gopstop_agent.resolver import ClaudePlaceResolver
 from test_resolution_cache import PLACE, SOURCES
@@ -24,6 +25,9 @@ def request_body():
 
 @pytest.mark.parametrize("finish", ["tool_calls", "stop"])
 async def test_groq_sends_forced_function_and_normalizes_only_its_validated_input(finish):
+    original = request_body()
+    snapshot = deepcopy(original)
+
     def handle(request):
         assert str(request.url) == "https://api.groq.com/openai/v1/chat/completions"
         assert request.headers["Authorization"] == "Bearer fixture-secret"
@@ -33,12 +37,69 @@ async def test_groq_sends_forced_function_and_normalizes_only_its_validated_inpu
         assert body["model"] == "openai/gpt-oss-20b" and body["reasoning_effort"] == "low"
         assert body["max_completion_tokens"] == 2048 and not body["parallel_tool_calls"]
         assert body["messages"][0]["role"] == "system"
-        assert body["tools"][0]["function"]["parameters"] == request_body()["tools"][0]["input_schema"]
+        parameters = body["tools"][0]["function"]["parameters"]
+        expected = deepcopy(snapshot["tools"][0]["input_schema"])
+        definition = expected.pop("$defs")["SourceResolution"]
+        expected["properties"]["place"]["anyOf"] = [definition, {"type": "null"}]
+        assert parameters == expected  # Retain required fields, bounds and extra-field rejection.
+        assert '"$ref"' not in json.dumps(parameters) and '"$defs"' not in json.dumps(parameters)
         assert body["tool_choice"] == {"type": "function", "function": {"name": "resolve_place"}}
         return httpx.Response(200, json=completion(finish=finish))
 
     async with httpx.AsyncClient(transport=httpx.MockTransport(handle)) as client:
-        assert await ToolModel(client, "fixture-secret", "groq", .5).call(request_body()) == {"place": PLACE}
+        assert await ToolModel(client, "fixture-secret", "groq", .5).call(original) == {"place": PLACE}
+    assert original == snapshot
+
+
+async def test_anthropic_keeps_the_original_pydantic_schema():
+    body = request_body()
+
+    def handle(request):
+        assert json.loads(request.content) == body
+        assert "$defs" in body["tools"][0]["input_schema"]
+        return httpx.Response(200, json={"stop_reason": "tool_use", "content": [{
+            "type": "tool_use", "name": "resolve_place", "input": {"place": PLACE},
+        }]})
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handle)) as client:
+        assert await ToolModel(client, "fixture").call(body) == {"place": PLACE}
+
+
+def test_inline_schema_expands_shared_nested_refs_and_preserves_sibling_constraints():
+    schema = {
+        "$defs": {"Name": {"type": "string", "minLength": 1},
+                  "Names": {"type": "array", "items": {"$ref": "#/$defs/Name"}}},
+        "type": "object", "properties": {
+            "names": {"$ref": "#/$defs/Names"},
+            "name": {"$ref": "#/$defs/Name", "minLength": 3},
+        },
+    }
+    assert inline_tool_schema(schema) == {
+        "type": "object", "properties": {
+            "names": {"type": "array", "items": {"type": "string", "minLength": 1}},
+            "name": {"allOf": [{"type": "string", "minLength": 1}, {"minLength": 3}]},
+        },
+    }
+
+
+@pytest.mark.parametrize("schema", [
+    {"$ref": "https://untrusted.example/schema"}, {"$ref": "#/$defs/Missing"},
+    {"$defs": {"Loop": {"$ref": "#/$defs/Loop"}}, "$ref": "#/$defs/Loop"},
+    {"$defs": {"A": {"$ref": "#/$defs/B"}, "B": {"$ref": "#/$defs/A"}}, "$ref": "#/$defs/A"},
+])
+async def test_unsupported_schema_fails_safely_before_groq_request(schema):
+    calls = []
+
+    def handle(request):
+        calls.append(request)
+        return httpx.Response(200, json=completion())
+
+    body = request_body()
+    body["tools"][0]["input_schema"] = schema
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handle)) as client:
+        with pytest.raises(ProviderError, match="^Model request is temporarily unavailable.$"):
+            await ToolModel(client, "fixture", "groq").call(body)
+    assert calls == []
 
 
 @pytest.mark.parametrize("bad", [{}, {"choices": []}, completion(finish="length"), completion(name="invented", finish="stop"),
@@ -57,7 +118,7 @@ async def test_bad_groq_response_is_a_safe_failure_without_retry(bad):
     assert len(calls) == 1
 
 
-@pytest.mark.parametrize("failure", [401, 429, 307, "timeout", "invalid_json", "two_tools"])
+@pytest.mark.parametrize("failure", [400, 401, 429, 307, "timeout", "invalid_json", "two_tools"])
 async def test_groq_failures_do_not_leak_retry_redirect_or_fall_back(failure):
     calls = []
 
