@@ -55,6 +55,16 @@ describe('realApi errors', () => {
     await expect(realApi.chat({ sessionId: 's', message: 'hi' })).rejects.toThrow('Chat session storage is temporarily unavailable.')
   })
 
+  it('preserves a waypoint matching failure separately from a disconnected route', async () => {
+    const detail = "One or more waypoints could not be matched to the available hiking network within the provider's search radius."
+    stubFailure(422, JSON.stringify({ type: 'about:blank', title: 'Unprocessable Entity', status: 422, detail, code: 'waypoint_not_routable' }), 'application/problem+json')
+
+    const error = await realApi.createRoute({ start: { lat: 49, lon: 20 }, end: { lat: 49.2, lon: 20.2 }, placeIds: [], preferences: [] }).catch((e: unknown) => e)
+
+    expect(error).toBeInstanceOf(ApiError)
+    expect(error).toMatchObject({ message: detail, status: 422, code: 'waypoint_not_routable' })
+  })
+
   it('joins FastAPI validation messages', async () => {
     stubFailure(422, JSON.stringify({ detail: [{ loc: ['body', 'message'], msg: 'String should have at least 1 character', type: 'string_too_short' }] }))
 

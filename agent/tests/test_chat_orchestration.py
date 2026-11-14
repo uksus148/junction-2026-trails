@@ -14,12 +14,12 @@ from gopstop_agent.config import Settings
 from gopstop_agent.handoff import HandoffResult
 from gopstop_agent.intent import IntentClarificationRequired, ProviderError, ProviderTimeout
 from gopstop_agent.main import create_app
-from gopstop_agent.trails_api import HandoffError, NoHikingRoute
+from gopstop_agent.trails_api import HandoffError, NoHikingRoute, WaypointNotRoutable
 from test_discovery import provider_fixture, row, tool
 from test_handoff import ApiFixture, discovery
 from test_groq import completion
 from test_geocoding_candidates import LAKE, MUNICIPALITY, RESORT, RYSY, SKOK, WESTERN_SKOK
-from test_trails_api import place, route
+from test_trails_api import place, problem, route
 
 
 @pytest.fixture
@@ -251,7 +251,40 @@ def service_for(finding=None, extraction_error=None, handoff_error=None):
     return ChatService(search, handoff, replies), search, handoff, replies
 
 
-@pytest.mark.parametrize("kind", ["missing", "ambiguous", "limits", "no_route"])
+async def test_real_http_handoff_preserves_the_unmatched_waypoint_outcome(build_app):
+    api, replies = ApiFixture(), []
+    providers = provider_fixture({"start": "Start", "end": "End"},
+                                 {"Start": ("Start", [row(1, "Start", 49.1, 20.1)]),
+                                  "End": ("End", [row(2, "End", 49.2, 20.2)])}, [])
+
+    def handle(request):
+        if request.url.host == "api.example":
+            if request.url.path == "/api/routes":
+                api.calls.append(request)
+                return httpx.Response(422, json=problem("waypoint_not_routable"))
+            return api(request)
+        body = json.loads(request.content) if request.content else {}
+        if body.get("tool_choice", {}).get("name") == "write_chat_reply":
+            facts = json.loads(body["messages"][0]["content"])
+            replies.append(facts)
+            assert "never infer these causes" in body["system"]
+            assert facts["outcome"] == "waypoint_not_routable"
+            return tool("write_chat_reply", {"reply": "A point could not be matched. Please check its coordinates."})
+        return providers(request)
+
+    app, cache, _ = build_app(handle)
+    with TestClient(app) as client:
+        response = client.post("/api/chat", json={"sessionId": "unmatched", "message": "Plan a hike"})
+    assert response.status_code == 200 and response.json()["places"] == []
+    assert "routeId" not in response.json() and "remote detail" not in response.text
+    assert len(replies) == 1 and await cache.llen("gopstop:chat-session:unmatched") == 2
+    assert len(api.rows) == 2  # Earlier ingestion survives a later routing failure.
+    assert api.saved_route is None
+    assert len([r for r in api.calls if r.url.path == "/api/routes"]) == 1
+    assert all(r.method != "GET" for r in api.calls)
+
+
+@pytest.mark.parametrize("kind", ["missing", "ambiguous", "limits", "no_route", "waypoint_not_routable"])
 async def test_normal_clarifications_and_no_route_store_exchange_without_route_id(build_app, kind):
     finding = discovery()
     if kind == "missing":
@@ -260,15 +293,18 @@ async def test_normal_clarifications_and_no_route_store_exchange_without_route_i
         finding.stops[0].place = None
     service, _, handoff, replies = service_for(
         finding, IntentClarificationRequired("Choose at most five stops.") if kind == "limits" else None,
-        NoHikingRoute() if kind == "no_route" else None,
+        NoHikingRoute() if kind == "no_route" else WaypointNotRoutable() if kind == "waypoint_not_routable" else None,
     )
     app, cache, _ = build_app(service=service)
     with TestClient(app) as client:
         response = client.post("/api/chat", json={"sessionId": "clarify", "message": "Помоги с маршрутом"})
     assert response.status_code == 200 and response.json() == {"reply": "Уточните маршрут.", "places": []}
     assert await cache.llen("gopstop:chat-session:clarify") == 2
-    assert replies.write.call_args.args[2] == ("no_route" if kind == "no_route" else "clarification")
-    if kind != "no_route":
+    assert replies.write.call_args.args[2] == (kind if kind in ("no_route", "waypoint_not_routable") else "clarification")
+    if kind == "waypoint_not_routable":
+        assert "search radius" in replies.write.call_args.args[3]["reason"]
+        assert "closed" not in json.dumps(replies.write.call_args.args[3])
+    if kind not in ("no_route", "waypoint_not_routable"):
         handoff.persist.assert_not_awaited()
 
 

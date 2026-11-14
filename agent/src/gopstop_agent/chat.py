@@ -13,7 +13,7 @@ from gopstop_agent.handoff import RouteHandoff, create_handoff
 from gopstop_agent.intent import IntentClarificationRequired, Message
 from gopstop_agent.llm import create_tool_model
 from gopstop_agent.replies import ClaudeReplyWriter
-from gopstop_agent.trails_api import HandoffError, NoHikingRoute
+from gopstop_agent.trails_api import HandoffError, NoHikingRoute, WaypointNotRoutable
 
 
 class ChatResponse(BaseModel):
@@ -47,6 +47,11 @@ class ChatService:
                         saved = await self._handoff.persist(finding)
                 except NoHikingRoute:
                     outcome, facts = "no_route", {"question": "Please choose different endpoints or stops."}
+                except WaypointNotRoutable:
+                    outcome, facts = "waypoint_not_routable", {
+                        "reason": "A waypoint could not be matched to the available hiking network within the search radius.",
+                        "question": "Please verify the coordinates or choose a different endpoint or stop.",
+                    }
                 else:
                     outcome, facts = "ready", {
                         "places": [place.name for place in saved.places],
