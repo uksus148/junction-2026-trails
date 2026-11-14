@@ -24,9 +24,11 @@ approve new endpoints, fields, tables, or Kafka event schemas.
   `source: "manual"`. It does not implement research provenance/OSM ingestion.
 - PR #34 is merged with both owner approvals. The accepted D1–D5 design is now
   published in CLAUDE.md. #35–#37 frontend follow-ups and #38 branding are merged.
+- PR #39 is merged: persisted ORS hiking routes and readback. The required
+  Valkey cache is the separate #41 follow-up under review.
 - This increment adds the internal API adapter and route handoff with fixture
-  validation; HTTP chat is still the baseline placeholder. API provenance writes
-  and routing must be available before live use. Draft API work is not a baseline.
+  validation; HTTP chat is still the baseline placeholder. Researched ingestion
+  and the routing cache must be reviewed before live use.
 - Mukhamed implements the agent; Murat owns the API/storage boundary; Daniil owns
   the frontend/chat boundary. Request both teammates for each agent PR.
 
@@ -72,7 +74,9 @@ These questions need the affected owners' answers, not unilateral agent changes:
 - **Photos and vectors: Murat + Mukhamed.** Agree entity keys, source metadata,
   caption storage, Gemini model, output dimension, and upsert semantics before
   Flyway migrations or vector writes. Do not infer an image license from a search
-  result. Search evidence is not itself a Photo.
+  result. Search evidence is not itself a Photo. Before photos are enabled, agree
+  how the API and agent handle missing credits/invalid URLs; current strict
+  validation rejects those photos with their route.
 - **Uploads: Murat + Mukhamed.** Agree the photo.uploaded version, event/photo IDs,
   storage reference, supplied coordinates, and retry/acknowledgment semantics.
   Specify the fallback when EXIF location is missing and how processing is tracked.

@@ -106,8 +106,9 @@ The design in [docs/AGENT_API_HANDOFF.md](docs/AGENT_API_HANDOFF.md) was accepte
 in merged PR #34: [Murat accepted D1–D4 personally](https://github.com/uksus148/trego/pull/34#pullrequestreview-5904059886),
 and [Daniil accepted D1/D3/D4/D5 and the clarified frontend work](https://github.com/uksus148/trego/pull/34#pullrequestreview-5903913530).
 Mukhamed owns the agent implementation. Agreement is not runtime availability:
-main currently implements manual creation only; researched writes and routing
-must be implemented and reviewed before enabling the chat-to-route flow.
+main includes manual creation and persisted routes (#39). Researched ingestion
+and the required routing cache still need reviewed implementations before live
+chat-to-route activation; cache follow-up #41 is under review.
 
 - **Researched ingestion (D1/D2):** `POST /api/places` adds optional, complete
   `provenance: {sourceUrl, osmType, osmId}`. The URL is HTTP(S), `osmType` is

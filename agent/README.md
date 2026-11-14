@@ -114,8 +114,8 @@ the returned OSM attribution when using these coordinates.
 
 This is an internal result, not an API `Place`: it has OSM type/ID and source
 evidence, but no persisted UUID or routeId. The factory does not run at application
-startup yet; HTTP chat behavior is unchanged. API ingestion and route handoff
-remain behind owner agreement. At chat wiring, use the user's message language
+startup yet; HTTP chat behavior is unchanged. The handoff design is accepted;
+researched ingestion and live integration remain implementation/acceptance work. At chat wiring, use the user's message language
 for normal and clarification replies, as agreed with Daniil in PR #28; UI labels
 remain English.
 
@@ -146,11 +146,16 @@ Root settings: `AGENT_API_BASE_URL` defaults to `http://localhost:8080`;
 This internal deadline does not replace a future total chat deadline covering
 discovery, handoff, and session storage.
 
-The factory is not wired into HTTP chat. Main currently has manual place creation
-only; its ignored provenance/server-owned manual source is rejected by this
-client. That rejection cannot undo an already committed place. Enable live use
-only after researched ingestion and routes implement the accepted contract;
+The factory is not wired into HTTP chat. Routes are merged in #39; place
+creation is still manual-only. Its ignored provenance/server-owned manual source
+is rejected by this client. That rejection cannot undo an already committed place. Enable live use
+only after researched ingestion and the required routing cache are reviewed;
 this client is not a capability probe. Tests use HTTP fixtures, including repeats,
 direct hikes, first-write replay, incomplete intent, provider/storage failures,
 malformed responses, possible partial writes, and cancellation. Live API/ORS,
 locale-aware replies, and the frontend route flow remain acceptance work.
+
+Before photos are enabled, agree the API/agent policy for incomplete attribution
+or invalid photo URLs. The current strict photo model rejects an invalid photo
+with the route; empty author/license or unsafe URLs must not silently become
+verified credits. This increment leaves that future policy unchanged.

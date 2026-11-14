@@ -263,9 +263,9 @@ follow-ups #35–#37 are merged; their fixture checks are not live route accepta
 1. **Murat + Mukhamed:** D1–D4 agreement is recorded above and in CLAUDE.md.
    Murat owns API implementation and Flyway; Mukhamed owns the agent client.
    Further shared changes need affected-owner agreement.
-2. **Daniil:** D1/D3/D4/D5 acceptance is recorded above. Review the clarified D5
-   frontend work and acceptance scenarios below; implementation remains his
-   follow-up. Approval of internal discovery #31 did not approve API writes.
+2. **Daniil:** D1/D3/D4/D5 acceptance and the clarified D5 frontend work are
+   recorded above. Implementation landed in #35–#37; the scenarios below still
+   require live verification. Approval of discovery #31 alone did not approve writes.
 3. The accepted decisions and examples are in CLAUDE.md. Murat implements the
    API-owned writes/routes on that agreed contract; test concurrency, malformed
    inputs, repeated stops, no-route, outages, and saved-route retrieval.
