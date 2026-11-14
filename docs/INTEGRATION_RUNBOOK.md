@@ -3,7 +3,7 @@
 This is the shared execution and diagnostic guide for Murat, Mukhamed, and Daniil.
 Read it before changing a service boundary, preparing an integration environment,
 or reporting an end-to-end result. Last checked: November 14, 2026, against
-`main` at `e2ba213` (through merged #50), plus API container PR #46 under review.
+`main` at `7d89639` (through merged #46 and #50), plus geocoding PR #52 under review.
 The container is not publicly deployed. Earlier live E4 checks retain their original
 revisions below: the API check ran before rebase, and the agent session check used
 an isolated `b51e4d0` snapshot. They do not establish same-revision browser/E5 acceptance.
@@ -39,14 +39,15 @@ Replace pending evidence with a PR/run link and tested revision; retain useful h
 | B3 | Discovery and internal API handoff | Mukhamed | Merged internally | #31, #40; fixtures do not enable HTTP chat |
 | B4 | Frontend route/source/error compatibility | Daniil | Merged | #35-#37; live browser acceptance pending |
 | B5 | Reuse source-grounded Claude resolutions | Mukhamed | Merged | [#44](https://github.com/uksus148/trego./pull/44), main `440f69d`; 202 agent fixture tests; live latency unmeasured |
-| B6 | Groq GPT OSS 20B and executable live checks | Mukhamed | Merged; live resolution blocked | [#47](https://github.com/uksus148/trego./pull/47), main `08726c3`: 236 fixture tests; Daniil reported #48 during live testing |
-| B7 | Inline Groq tool schema for #48 | Mukhamed | Merged | [#50](https://github.com/uksus148/trego./pull/50), main `e2ba213`; 246 fixture tests; record live rerun evidence separately |
-| B8 | Non-root Java 21 API container | Murat | Prepared; awaiting re-review | [#46](https://github.com/uksus148/trego./pull/46); container/CI packaging only, no public deployment |
+| B6 | Groq GPT OSS 20B and executable live checks | Mukhamed | Merged | [#47](https://github.com/uksus148/trego./pull/47), main `08726c3`; resolution failure subsequently fixed in #50 |
+| B7 | Inline Groq tool schema for #48 | Mukhamed | Merged; live probe passed | [#50](https://github.com/uksus148/trego./pull/50), main `e2ba213`, both approvals; Daniil: 5/5 valid resolutions, chat 200 in 39 s; subsequent #51 remains |
+| B8 | Non-root Java 21 API container | Murat | Merged; public deployment pending | [#46](https://github.com/uksus148/trego./pull/46), main `7d89639`; container/CI packaging only, no public deployment |
+| B9 | Evidenced Nominatim candidate selection for #51 | Mukhamed | Under re-review; live control passed | [#52](https://github.com/uksus148/trego./pull/52), tested `ae6dc82`; 259 fixture tests; Daniil's live discovery/control browser evidence below; #49 still blocks Rysy |
 | E1 | Researched place ingestion and OSM deduplication | Murat | Merged | [#45](https://github.com/uksus148/trego./pull/45), both approvals; deploy V3 on the selected target |
 | E2 | HTTP chat orchestration and total deadline | Mukhamed | Merged; default disabled | [#43](https://github.com/uksus148/trego./pull/43); #47 adds selected Groq transport and live checks |
-| E3 | Real-service frontend verification | Daniil | Attempted; blocked by #48 | Rerun with reviewed schema fix; verify direct/chat routes, sources, markers and errors |
-| E4 | Integration environment and credentials | Murat coordinates; all owners verify clients | Backend preflight passed; live intent/research passed; Groq resolution failed | [Live evidence](#e4-live-backend-evidence), [#48](https://github.com/uksus148/trego./issues/48); repeat agent preflight after the fix |
-| E5 | Full Tatras workflow | All three | Attempted; not accepted | #48 resolution failure and [#49](https://github.com/uksus148/trego./issues/49) ORS/Rysy failure; complete the acceptance matrix on a recorded revision |
+| E3 | Real-service frontend verification | Daniil | Attempted; blocked by #51/#49 | Rerun with reviewed geocoding fix; verify direct/chat routes, sources, markers and errors |
+| E4 | Integration environment and credentials | Murat coordinates; all owners verify clients | Backend preflight and live intent/research/resolution passed; full agent preflight pending | [Live evidence](#e4-live-backend-evidence), #50 review; repeat complete agent preflight after #51 |
+| E5 | Full Tatras workflow | All three | Attempted; not accepted | [#51](https://github.com/uksus148/trego./issues/51) geocoding and [#49](https://github.com/uksus148/trego./issues/49) ORS/Rysy failure; complete the acceptance matrix on a recorded revision |
 
 Before E1, the merged manual endpoint ignored provenance and assigned `source: "manual"`;
 the agent rejected that response after a possible committed write. E1 removes this mismatch
@@ -61,12 +62,12 @@ Follow [the Groq live test guide](../agent/LIVE_TEST.md): reviewed code/V3 -> ex
 The preflight validates three tool tasks, a real Exa cache miss, Nominatim, sessions and
 read-only API access. The HTTP route check verifies CORS, sourced Places, saved GET and
 stored exchange. These are opt-in live operations; CI exercises fixtures without credentials.
-Keys are only on the team's machine, so this fix claims no new live E4/E5 pass.
-Local evidence: 246 agent fixture tests pass, including Groq/Anthropic HTTP orchestration,
-inline schema constraints, quota cancellation, provider-separated caching and safe
-rejection of the invalid resolution examples reported in #48 without ingestion/session writes.
+LLM/Exa/ORS keys remain on the team's machine. This fix claims no new full E4/E5 pass.
+Local evidence: 259 agent fixture tests pass, including HTTP Tatras handoff, unresolved
+local ambiguity, retained no-route handling, candidate cache/fallback behavior and
+isolation from an enabled dotenv/process environment. Compilation and frozen lock checks pass.
 
-### Live blockers reported in #48 and #49
+### Live findings in #48, #49 and #51
 
 Daniil ran main `08726c3` with real Aiven PostgreSQL/Valkey, ORS, Groq and Exa,
 enabled chat and frontend mocks off. The Tatras request returned 502 after successful
@@ -79,8 +80,28 @@ The fix expands acyclic local schema definitions only for Groq and explicitly na
 the nested fields. It retains `place: SourceResolution | null`, source-index bounds,
 unknown-field rejection, timeouts and no-retry behavior. The revised resolver prompt
 also changes the existing full-request cache hash; do not flush shared Valkey keys.
-After review/deployment, rerun the [preflight and chat checks](../agent/LIVE_TEST.md#recheck-issue-48)
+Both reviewers approved #50; it merged at `e2ba213`. Daniil's live check on
+`f2b7b9a` reports 5/5 valid one-source resolutions and browser chat 200 in 39 s,
+all resolution stages ok. This confirms the #48 schema fix, not a completed hike.
+He filed [#51](https://github.com/uksus148/trego./issues/51): Nominatim loses all
+three places to empty regional queries or the exactly-one-result rule.
+
+The #51 fix uses canonical-name/country queries and an empty-only simplified search,
+OSM name/type selection and independently resolved route points to narrow ambiguity.
+Positive candidate arrays live 24 hours; empty arrays five minutes. Decisions are
+recomputed, old v1 nulls are ignored and the revised resolver prompt changes its cache hash.
+No global cache flush, extra model call, error retry or public contract change is added.
+After review/deployment, rerun the [preflight and chat checks](../agent/LIVE_TEST.md#recheck-issue-51)
 with `openai/gpt-oss-20b` and record revision, safe reports and elapsed time.
+
+Isolated live Nominatim adapter evidence on November 14: three country-qualified
+searches using supplied names/types and local fake Valkey resolved Štrbské Pleso
+lake (way `4816134`, 49.1222049, 20.0577798), the High Tatras Skok waterfall
+(node `383862401`, 49.153124, 20.0452686) and Rysy peak (node `1862536196`,
+49.1793186, 20.0884638). The Skok search also returned a western namesake; selection
+used the independently resolved points, with no extra HTTP request. These are real
+public Nominatim calls through the changed adapter, with synthetic resolution inputs
+and a local fake cache; no live Groq, Exa, Aiven, API or ORS acceptance was run here.
 
 Separately, [#49](https://github.com/uksus148/trego./issues/49), assigned to Murat,
 reports ORS code 2010 (no routable point within 350 m) for Rysy/Chata pod Rysmi.

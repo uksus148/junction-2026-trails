@@ -154,12 +154,35 @@ cancelled provider work is not cached/retried. Concurrent first misses may still
 make duplicate calls; this cache adds no distributed coalescing guarantee.
 No new configuration is needed; it uses the existing Valkey client and deadlines.
 
-Nominatim results, including empty/ambiguous ones, are cached for 24 hours. A
-shared Valkey token gate holds through each request and for one second after it
+Nominatim requests use up to eight candidates and include OSM name aliases. The
+resolver asks for an evidenced canonical name and country, omitting broad mountain
+regions. An empty `name, region, country` search can make one distinct
+`name, country` search; HTTP errors and ambiguous results do not trigger fallback.
+Both searches share one provider deadline and the existing distributed request gate.
+
+Selection requires a matching name/alias (case/diacritics normalized, generic English
+feature words ignored) and a matching OSM type when an evidenced supported category
+is supplied. Recognized tags are waterfall, peak, lake, castle, village, town, city
+and resort. Unrecognized interests do not become OSM filters. For several matches,
+discovery can reconsider the candidates within 25 km of an independently resolved
+point in the same request. It accepts only one remaining OSM identity, never the
+first/nearest/most important hit. Contextual choices do not become new anchors.
+This is a conservative ambiguity filter, not a route-distance limit; several local
+matches or insufficient context remain unresolved without partial ingestion.
+
+`gopstop:nominatim:search:v2` caches validated candidate arrays for 24 hours, or an
+empty array for five minutes. Selection is recomputed from name/tags/context, so an
+ambiguous decision is not frozen as null. Cache identity includes host, exact query
+and search options; hits do not refresh TTL. Old v1 place/null entries are ignored
+without clearing shared data. A shared Valkey token gate holds through each request and for one second after it
 finishes, including errors. Waiting has a deadline; ownership checks prevent an
 expired worker from changing another's gate. Set `AGENT_NOMINATIM_USER_AGENT` to
 identify the team; `AGENT_NOMINATIM_BASE_URL` can select a hosted service. Display
 the returned OSM attribution when using these coordinates.
+
+Pytest clears ambient service settings and disables dotenv loading before collection;
+tests opt into explicit fixture settings. A developer's enabled root `.env` must not
+select live providers during the fixture suite. This does not change application startup.
 
 This is an internal result, not an API `Place`: it has OSM type/ID and source
 evidence, but no persisted UUID or routeId. Enabled startup composes the factory;

@@ -195,11 +195,16 @@ submitted `source`, return 400 rather than being silently ignored. See the
   no public fields change. The root example selects Groq and a 90-second discovery
   diagnostic budget; code defaults remain 60/60/180 seconds for discovery/handoff/chat.
   Activation follows [the live test guide](agent/LIVE_TEST.md) after review and E4.
-  Issue #48 reports a live Groq `resolve_place` schema failure on main `08726c3`.
-  The follow-up inlines acyclic Pydantic `$defs`/`$ref` in Groq function parameters
-  and states the nested field names explicitly. Internal typed results and public
-  contracts stay unchanged; malformed outputs still fail without writes or retries.
-  Fixture checks pass; live Groq resolution and E3/E5 must be rerun before acceptance.
+  Issue #48's Groq schema fix merged in #50 (main `e2ba213`); Daniil confirmed
+  5/5 valid live resolutions and disappearance of the 502. Subsequent live testing
+  found Nominatim failures (#51), separately from ORS/Rysy (#49); E3/E5 remain open.
+  The #51 follow-up requests evidenced canonical-name/country queries, retains OSM
+  candidates and selects only a unique name/type match. Ambiguous matches may be
+  narrowed to 25 km around independently resolved route points; remaining ambiguity
+  still requires clarification. One simpler query is allowed only after an empty
+  regional search, with no retries after provider errors. Candidate caches retain
+  24-hour positive results and five-minute empty results in a new namespace.
+  Internal/public result shapes, source binding and API handoff remain unchanged.
 
 ### API container packaging
 
