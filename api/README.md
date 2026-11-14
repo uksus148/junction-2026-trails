@@ -102,7 +102,7 @@ curl -i 'http://localhost:8080/api/places' \
   -d '{"name":"Skok waterfall","lat":49.1536,"lon":20.0417,"tags":["waterfall","nature"]}'
 ```
 
-The implementation returns HTTP **201 Created** and a `Place` with a generated UUID, the supplied coordinates, `photos: []`, and server-assigned `source: "manual"`. This completes the frontend's existing `addPlace` operation. These status and source details are proposed for affected-owner review before publication is merged.
+The implementation returns HTTP **201 Created** and a `Place` with a generated UUID, the supplied coordinates, `photos: []`, and server-assigned `source: "manual"`. This completes the frontend's existing `addPlace` operation. The frontend and agent owners confirmed these manual-write semantics in [PR #33](https://github.com/uksus148/junction-2026-trails/pull/33); they are recorded in the canonical [API contract](../CLAUDE.md#api-contract). Researched provenance, OSM deduplication, and route handoff remain subject to separate agreement.
 
 Name, latitude, longitude, and tags are required. Name must contain non-whitespace characters; coordinates must be finite and within WGS84 ranges. Tags may be empty; each supplied entry must be non-null and non-blank. Names and tags are stripped of surrounding whitespace, and repeated tags are removed while preserving order and case. An input `source` field cannot override the server-assigned value. Invalid or malformed input returns HTTP 400 and does not insert a row. Recognized input errors have a dedicated exception mapping; unexpected failures remain server errors.
 
