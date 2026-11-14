@@ -86,6 +86,19 @@ Agree changes with the affected developers and record them here.
 - `Photo = {url, thumbUrl, author, license, sourceUrl, lat, lon}`
 - `Route = {id, geojson(LineString), distanceKm, ascentM, durationMin, places:[Place], segments:[{fromKm,toKm,photos:[Photo]}]}`
 
+### Proposed sourced place and route handoff — not agreed yet
+
+[docs/AGENT_API_HANDOFF.md](docs/AGENT_API_HANDOFF.md) proposes optional research
+provenance for place creation, atomic OSM deduplication into persisted UUIDs,
+ordered route handoff, error codes, and chat completion. Daniil explicitly
+accepted D1/D3/D4/D5 in [his PR #34 response](https://github.com/uksus148/junction-2026-trails/pull/34#pullrequestreview-5901154716)
+and owns the recorded frontend integration tasks. Murat's personal API/storage
+decision is still pending; the technical COMMENT from his account does not
+approve the architecture. Required owner agreement remains a gate to implementation.
+The proposal does not change the published API contract above. Move accepted
+decisions here after review; PR #31's internal discovery approval is not write
+contract agreement.
+
 ### Proposed extension: personalization and day plan — not agreed yet
 
 Discussed in [docs/CONTRACT_REVIEW.md](docs/CONTRACT_REVIEW.md). Move items into the contract above only after the owners agree.
