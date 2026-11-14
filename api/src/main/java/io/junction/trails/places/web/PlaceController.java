@@ -7,8 +7,12 @@ import io.junction.trails.places.model.Place;
 import java.util.Arrays;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -25,5 +29,11 @@ class PlaceController {
             throw new InvalidPlaceInputException("tags must be a comma-separated list of non-empty values");
         }
         return places.search(bounds, requestedTags);
+    }
+
+    @PostMapping("/api/places")
+    @ResponseStatus(HttpStatus.CREATED)
+    Place create(@RequestBody CreatePlaceRequest request) {
+        return places.create(request.toCommand());
     }
 }
