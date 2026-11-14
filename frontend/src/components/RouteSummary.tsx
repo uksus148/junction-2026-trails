@@ -1,6 +1,5 @@
+import { formatAscent, formatDistance, formatDuration } from '../lib/format'
 import type { Route } from '../types'
-
-const formatDuration = (min: number) => `${Math.floor(min / 60)}h ${String(min % 60).padStart(2, '0')}m`
 
 interface RouteSummaryProps {
   route: Route
@@ -8,8 +7,8 @@ interface RouteSummaryProps {
 
 export function RouteSummary({ route }: RouteSummaryProps) {
   const stats = [
-    { label: 'Distance', value: `${route.distanceKm} km` },
-    { label: 'Ascent', value: route.ascentM > 0 ? `${route.ascentM} m` : '—' },
+    { label: 'Distance', value: formatDistance(route.distanceKm) },
+    { label: 'Ascent', value: formatAscent(route.ascentM) },
     { label: 'Walking', value: formatDuration(route.durationMin) },
   ]
   return (
