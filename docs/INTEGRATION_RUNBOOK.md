@@ -332,12 +332,15 @@ Run sequentially with a unique session label; keep all three owners available fo
 | 6 | Repeated OSM ingestion, including concurrency | Same canonical UUID and metadata, correct 201/200 behavior |
 | 7 | Ambiguous request / excessive intent | Clarification without routeId or partial ingestion; stale browser route clears |
 | 8 | Chat after different manual endpoints; repeated visits | Track endpoints replace old markers; repeated route visits remain; display markers deduplicate |
-| 9 | No-route and isolated dependency failures | Expected distinction between normal no-route reply and honest 502/503/504 failures; no fake track/success |
+| 9 | No-route and isolated dependency failures | Distinct no-path/unmatched-waypoint clarification and honest 502/503/504 failures; no fake track/success |
 | 10 | Follow-up in the same session; another region | Recent history is used and a different supported request completes across real services |
 
-Use the canonical Tatras message: "I want to hike from Štrbské Pleso to Rysy via the Skok
-waterfall. I love wild scenery." Confirm the actual location/source resolution rather than
-assuming a fixture's coordinates. Start with a short known hiking segment for step 1.
+Issue #49's revised E5 candidate, pending affected-owner review, is: "Plan a summer hike
+in July from Štrbské Pleso to Popradské pleso via the Skok waterfall. I love wild scenery."
+Keep the original Rysy request as an unmatched-waypoint regression. See
+[exact live coordinates, results and independent seasonal evidence](ROUTING_DIAGNOSTICS.md).
+The July context is a planning scenario, not a date-aware ORS feature or November access
+claim. Confirm actual location/source resolution; start with a short segment for step 1.
 
 Repeating chat text need not produce identical routing inputs. Prove cache reuse with the
 same resolved payload and provider-call evidence. Sequential hits do not prove simultaneous
@@ -415,3 +418,14 @@ published. Backend connectivity/cache/ORS are verified. E4 as a whole still requ
 selected LLM/Exa credentials and verified model/account access. Leave `AGENT_CHAT_ENABLED=false`
 until reviewed provider code/V3 is deployed and those checks pass. E1/E2 are merged.
 E3 browser acceptance and the full sourced Tatras E5 workflow remain pending.
+
+
+## Issue #49 follow-up
+
+The local `fix/routing-waypoint-errors` branch preserves routing constraints and separates
+2009 no-path from 2010 network-match failure. The API's new 422 `waypoint_not_routable`
+and the agent's distinct clarification need affected-owner review. Both errors remain
+uncached and create no route; earlier place writes may remain. Do not infer closure,
+season or difficulty from the code. Two bounded live requests reproduced the Rysy failure
+and verified the July-planning alternative in [routing diagnostics](ROUTING_DIAGNOSTICS.md).
+This does not complete E5: geocoding issue #51 and same-revision browser acceptance remain.

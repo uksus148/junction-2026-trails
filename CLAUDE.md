@@ -76,7 +76,18 @@ frontend (React + Vite + Tailwind + MapLibre)
 
 High Tatras. “I want to hike from Štrbské Pleso to Rysy via the Skok waterfall. I love wild scenery.”
 
-The agent finds Skok and Rysy, builds a route through them, and displays the track, places, and photos for each section with sources. A judge must also be able to enter a different request. Keep the region configurable, with deeper testing for the Tatras.
+The agent finds the requested places, builds a route through them, and displays the track,
+places, and photos with sources. A judge must also be able to enter a different request.
+Keep the region configurable, with deeper testing for the Tatras.
+
+Issue #49 live verification found that the original Rysy endpoint cannot be matched by
+the current ORS foot-hiking graph within its default 350 m radius. Retain it as a regression;
+never widen the radius or silently substitute a destination. Murat requested a demo
+correction. The revised E5 candidate for affected-owner review is **July summer planning**:
+"Plan a summer hike in July from Štrbské Pleso to Popradské pleso via the Skok waterfall.
+I love wild scenery." It routed with the same provider/options. The MVP has no date-aware
+routing engine; seasonal evidence and [routing diagnostics](docs/ROUTING_DIAGNOSTICS.md)
+are separate from the provider failure code.
 
 ### API contract
 
@@ -161,8 +172,12 @@ submitted `source`, return 400 rather than being silently ignored. See the
   place-search errors remain compatible. Codes/statuses are `invalid_request`
   (400), `unknown_place` and `no_hiking_route` (422), `routing_provider_error`
   (502), `storage_unavailable` and `cache_unavailable` (503), `routing_timeout`
-  (504), and `route_not_found` (404). Only verified `no_hiking_route` becomes a
-  normal chat reply asking for different waypoints. Dependency failures remain
+  (504), and `route_not_found` (404). This issue #49 branch adds 422
+  `waypoint_not_routable` for ORS 2010, distinct from 2009 `no_hiking_route`,
+  with affected-owner review pending. Verified routing failures produce distinct
+  normal clarifications: different waypoints for no path, or check coordinates/
+  choose another point for a failed network match. Neither proves a closure,
+  seasonal restriction or difficulty exclusion. Dependency failures remain
   honest errors: the agent retains its `detail` envelope with 502 for dependency
   failures/invalid responses, 503 for storage/cache, and 504 for deadlines. An
   unknown UUID after ingestion is a dependency inconsistency. Never expose

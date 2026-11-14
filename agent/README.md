@@ -70,8 +70,9 @@ Chat loads the latest six exchanges, discovers places, clarifies incomplete or
 excessive intent without ingestion, or calls the existing route handoff. Claude
 phrases the known outcome in the latest user's language (conversation language
 for a name/link-only follow-up). After generation, store the exchange before 200.
-Only verified no-hiking-route becomes a normal reply. Provider/invalid-response
-failures return 502, storage/cache failures 503, and deadlines 504, with safe detail.
+Verified no-path and unmatched-waypoint results produce distinct normal clarifications
+under issue #49's extension, pending affected-owner review. Neither identifies a closure,
+season or difficulty as its cause. Provider/invalid-response failures return 502, storage/cache failures 503, and deadlines 504, with safe detail.
 Failed requests do not record success; already committed API data may survive
 reply/storage failure or cancellation. Never automatically retry uncertain POSTs.
 
@@ -204,8 +205,11 @@ geometry, invalid units/coordinates, or a failed readback produce an error.
 `HandoffResult` holds the saved route, persisted place records deduplicated only
 for display, and OSM attribution. Original discovery evidence is left intact.
 
-Only a complete 422 Problem Detail with `code: "no_hiking_route"` raises
-`NoHikingRoute` for a normal chat reply. Other failures raise safe `HandoffError`
+A complete 422 Problem Detail with `code: "no_hiking_route"` raises `NoHikingRoute`.
+Issue #49 adds `code: "waypoint_not_routable"` as a separate `WaypointNotRoutable`;
+it asks for coordinate verification or a different point without a radius retry or
+unsupported closure claim. See [routing evidence](../docs/ROUTING_DIAGNOSTICS.md).
+Other failures raise safe `HandoffError`
 with an HTTP status of 502/503/504 and no remote body. Neither POST retries
 nor redirects are followed; lost responses/deadlines may leave saved data behind.
 There is no cross-service rollback or generated fallback route.
