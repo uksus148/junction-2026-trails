@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { api } from '../api/client'
+import { mergePlaces } from '../lib/places'
 import type { ChatMessage, LatLon, Place, Route } from '../types'
 import { useAsyncTask } from './useAsyncTask'
 
@@ -29,7 +30,14 @@ export function useTrip() {
     return task.run(async () => {
       const res = await api.chat({ sessionId, message: text })
       setMessages((prev) => [...prev, message('assistant', res.reply)])
-      if (res.routeId) showRoute(await api.getRoute(res.routeId))
+      if (res.routeId) {
+        showRoute(await api.getRoute(res.routeId))
+        return
+      }
+      // Places without a route (allowed by the contract): show them and drop the route that answered an earlier question.
+      setRoute(null)
+      setSelectedSegment(null)
+      setPlaces((prev) => mergePlaces(prev, res.places))
     })
   }
 
