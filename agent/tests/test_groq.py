@@ -19,7 +19,7 @@ def completion(name="resolve_place", value=None, finish="tool_calls"):
 
 
 def request_body():
-    return ClaudePlaceResolver(None, "unused", "openai/gpt-oss-120b").request_body("Skok", SOURCES)
+    return ClaudePlaceResolver(None, "unused", "openai/gpt-oss-20b").request_body("Skok", SOURCES)
 
 
 async def test_groq_sends_forced_function_and_normalizes_only_its_validated_input():
@@ -29,7 +29,7 @@ async def test_groq_sends_forced_function_and_normalizes_only_its_validated_inpu
         assert "x-api-key" not in request.headers
         assert request.extensions["timeout"]["read"] == .5
         body = json.loads(request.content)
-        assert body["model"] == "openai/gpt-oss-120b" and body["reasoning_effort"] == "low"
+        assert body["model"] == "openai/gpt-oss-20b" and body["reasoning_effort"] == "low"
         assert body["max_completion_tokens"] == 2048 and not body["parallel_tool_calls"]
         assert body["messages"][0]["role"] == "system"
         assert body["tools"][0]["function"]["parameters"] == request_body()["tools"][0]["input_schema"]
@@ -132,5 +132,5 @@ def test_groq_environment_selects_only_its_key_and_masks_secrets(monkeypatch):
     monkeypatch.setenv("EXA_API_KEY", "private-exa-secret")
     settings = Settings(_env_file=None, anthropic_api_key="")
     settings.require_chat_configuration()
-    assert settings.llm_model == "openai/gpt-oss-120b"
+    assert settings.llm_model == "openai/gpt-oss-20b"
     assert "private-groq-secret" not in repr(settings) and "private-exa-secret" not in repr(settings)

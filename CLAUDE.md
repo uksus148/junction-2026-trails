@@ -190,7 +190,7 @@ submitted `source`, return 400 rather than being silently ignored. See the
   latency/provider/proxy budgets still need live-preflight measurement.
 
   Mukhamed requested Groq for live integration tests. This PR adds
-  `AGENT_LLM_PROVIDER=groq`, `GROQ_API_KEY`, `AGENT_GROQ_MODEL=openai/gpt-oss-120b`
+  `AGENT_LLM_PROVIDER=groq`, `GROQ_API_KEY`, `AGENT_GROQ_MODEL=openai/gpt-oss-20b`
   and shared transport for all three model tasks. Anthropic remains compatible;
   no public fields change. The root example selects Groq and a 90-second discovery
   diagnostic budget; code defaults remain 60/60/180 seconds for discovery/handoff/chat.

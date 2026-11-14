@@ -30,7 +30,7 @@ class Settings(BaseSettings):
     anthropic_model: str = "claude-haiku-5-5"
     llm_provider: Literal["anthropic", "groq"] = "anthropic"
     groq_api_key: SecretStr = Field(default="", validation_alias="GROQ_API_KEY")
-    groq_model: str = "openai/gpt-oss-120b"
+    groq_model: str = "openai/gpt-oss-20b"
     provider_timeout_seconds: float = Field(default=20, gt=0, le=60)
     discovery_timeout_seconds: float = Field(default=60, gt=0, le=180)
     api_base_url: HttpUrl = "http://localhost:8080"

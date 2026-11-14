@@ -12,7 +12,7 @@ Preserve private values in ignored root `.env`; copy missing settings from `.env
 AGENT_LLM_PROVIDER=groq
 GROQ_API_KEY=
 EXA_API_KEY=
-AGENT_GROQ_MODEL=openai/gpt-oss-120b
+AGENT_GROQ_MODEL=openai/gpt-oss-20b
 AGENT_CHAT_ENABLED=false
 AGENT_DISCOVERY_TIMEOUT_SECONDS=90
 AGENT_CHAT_TIMEOUT_SECONDS=180
@@ -45,6 +45,9 @@ Ambiguous geocoding is reported separately. Reports omit keys, messages and prov
 
 After this PR is reviewed/merged, the API is migrated and E4 passes on the team's machine,
 set `AGENT_CHAT_ENABLED=true` in root `.env` and start/restart the agent:
+
+For Groq free limits, allow at least a minute after preflight for tokens to replenish;
+preflight and the server are separate processes sharing the same account budget.
 
 ```sh
 uv run --frozen uvicorn gopstop_agent.main:app --app-dir src --host 127.0.0.1 --port 8000 --log-config logging.json

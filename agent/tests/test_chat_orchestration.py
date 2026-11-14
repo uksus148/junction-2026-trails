@@ -55,7 +55,7 @@ async def test_http_factories_preserve_sources_history_and_saved_route_with_safe
         body = json.loads(request.content) if request.content else {}
         if request.url.host == "api.groq.com":
             assert provider == "groq" and request.headers["Authorization"] == "Bearer fixture-groq-secret"
-            assert body["model"] == "openai/gpt-oss-120b"
+            assert body["model"] == "openai/gpt-oss-20b"
             name = body["tool_choice"]["function"]["name"]
             adapted = httpx.Request("POST", "https://api.anthropic.com/v1/messages", json={
                 "tool_choice": {"name": name}, "messages": body["messages"][1:],

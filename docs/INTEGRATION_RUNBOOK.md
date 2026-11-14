@@ -161,7 +161,7 @@ secret examples. The table below is a configuration checklist, not a file contai
 | `ORS_API_KEY` | Valid server-side key; Murat |
 | `ORS_BASE_URL` | Existing configured ORS endpoint; Murat verifies access |
 | `ORS_CONNECT_TIMEOUT`, `ORS_READ_TIMEOUT` | Existing defaults `5s`, `20s`; Murat |
-| `AGENT_LLM_PROVIDER`, `GROQ_API_KEY`, `AGENT_GROQ_MODEL` | Groq profile: `groq`, private key, `openai/gpt-oss-120b`; Mukhamed |
+| `AGENT_LLM_PROVIDER`, `GROQ_API_KEY`, `AGENT_GROQ_MODEL` | Groq profile: `groq`, private key, `openai/gpt-oss-20b`; Mukhamed |
 | `ANTHROPIC_API_KEY`, `EXA_API_KEY` | Anthropic key only if selected; Exa always required for discovery |
 | `AGENT_ANTHROPIC_MODEL` | Account-verified model ID; current default has no live verification |
 | `AGENT_NOMINATIM_USER_AGENT` | Existing identifying team value; Mukhamed |
