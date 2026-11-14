@@ -11,6 +11,7 @@ from gopstop_agent.diagnostics import stage
 from gopstop_agent.exa import ExaSearch, ResearchSource
 from gopstop_agent.geocoding import GeocodedPlace, NominatimGeocoder, OSM_ATTRIBUTION
 from gopstop_agent.intent import ClaudeIntentExtractor, Message, ProviderTimeout, RouteIntent
+from gopstop_agent.llm import ToolModel, create_tool_model
 from gopstop_agent.resolution_cache import CachedPlaceResolver
 from gopstop_agent.resolver import ClaudePlaceResolver
 
@@ -105,17 +106,18 @@ class PlaceDiscovery:
             raise ProviderTimeout("Place discovery exceeded its time limit.") from exc
 
 
-def create_discovery(client: httpx.AsyncClient, cache: Redis, settings: Settings) -> PlaceDiscovery:
+def create_discovery(client: httpx.AsyncClient, cache: Redis, settings: Settings,
+                     tool_model: ToolModel | None = None) -> PlaceDiscovery:
     """Compose discovery during opt-in chat startup or explicit fixture use."""
-    claude_key = settings.anthropic_api_key.get_secret_value()
+    settings.require_chat_configuration()
+    key = settings.llm_key.get_secret_value()
     exa_key = settings.exa_api_key.get_secret_value()
-    if not claude_key or not exa_key:
-        raise ValueError("Place discovery requires ANTHROPIC_API_KEY and EXA_API_KEY.")
+    model = tool_model or create_tool_model(client, settings)
     timeout = settings.provider_timeout_seconds
     return PlaceDiscovery(
-        ClaudeIntentExtractor(client, claude_key, settings.anthropic_model, timeout),
+        ClaudeIntentExtractor(client, key, settings.llm_model, timeout, tool_model=model),
         ExaSearch(client, cache, exa_key, timeout),
-        CachedPlaceResolver(ClaudePlaceResolver(client, claude_key, settings.anthropic_model, timeout), cache),
+        CachedPlaceResolver(ClaudePlaceResolver(client, key, settings.llm_model, timeout, tool_model=model), cache),
         NominatimGeocoder(client, cache, settings.nominatim_user_agent,
                           str(settings.nominatim_base_url), timeout),
         settings.discovery_timeout_seconds,

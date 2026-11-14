@@ -155,6 +155,6 @@ async def test_whole_discovery_deadline_cancels_work_before_any_research():
 
 async def test_factory_requires_live_keys_and_empty_results_are_not_ready(cache):
     async with httpx.AsyncClient() as client:
-        with pytest.raises(ValueError, match="requires ANTHROPIC_API_KEY and EXA_API_KEY"):
+        with pytest.raises(ValueError, match="requires the selected LLM key"):
             create_discovery(client, cache, Settings(_env_file=None, anthropic_api_key="", exa_api_key=""))
     assert not DiscoveryResult(intent=RouteIntent(start="A", end="B")).ready_for_handoff

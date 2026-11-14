@@ -11,6 +11,7 @@ from gopstop_agent.diagnostics import stage
 from gopstop_agent.discovery import PlaceDiscovery, create_discovery
 from gopstop_agent.handoff import RouteHandoff, create_handoff
 from gopstop_agent.intent import IntentClarificationRequired, Message
+from gopstop_agent.llm import create_tool_model
 from gopstop_agent.replies import ClaudeReplyWriter
 from gopstop_agent.trails_api import HandoffError, NoHikingRoute
 
@@ -60,6 +61,7 @@ class ChatService:
 
 
 def create_chat(client: httpx.AsyncClient, cache: Redis, settings: Settings) -> ChatService:
-    return ChatService(create_discovery(client, cache, settings), create_handoff(client, settings),
-                       ClaudeReplyWriter(client, settings.anthropic_api_key.get_secret_value(),
-                                         settings.anthropic_model, settings.provider_timeout_seconds))
+    model = create_tool_model(client, settings)
+    return ChatService(create_discovery(client, cache, settings, model), create_handoff(client, settings),
+                       ClaudeReplyWriter(client, settings.llm_key.get_secret_value(), settings.llm_model,
+                                         settings.provider_timeout_seconds, tool_model=model))

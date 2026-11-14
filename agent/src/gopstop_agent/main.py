@@ -46,12 +46,8 @@ def create_app(
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-        if configured.chat_enabled and chat_service is None and (
-            not configured.anthropic_api_key.get_secret_value().strip()
-            or not configured.exa_api_key.get_secret_value().strip()
-            or not configured.anthropic_model.strip()
-        ):
-            raise ValueError("Enabled chat requires Claude/Exa keys and a model ID.")
+        if configured.chat_enabled and chat_service is None:
+            configured.require_chat_configuration()
         client = (
             redis_client
             if redis_client is not None
