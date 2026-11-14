@@ -36,7 +36,7 @@ Replace pending evidence with a PR/run link and tested revision; retain useful h
 | B3 | Discovery and internal API handoff | Mukhamed | Merged internally | #31, #40; fixtures do not enable HTTP chat |
 | B4 | Frontend route/source/error compatibility | Daniil | Merged | #35-#37; live browser acceptance pending |
 | E1 | Researched place ingestion and OSM deduplication | Murat | Not implemented | Blocks actual agent-to-API ingestion |
-| E2 | HTTP chat orchestration and total deadline | Mukhamed | Prepared; awaiting review/merge | Opt-in implementation with 172 passing agent fixture tests; default disabled, E1/E4 block live use |
+| E2 | HTTP chat orchestration and total deadline | Mukhamed | Prepared; awaiting review/merge | [#43](https://github.com/uksus148/trego./pull/43), tested `7b78c43`: 172 agent fixture tests pass; default disabled, E1/E4 block live use |
 | E3 | Real-service frontend verification | Daniil | Pending | Disable mocks; verify direct/chat routes, sources, markers and errors |
 | E4 | Integration environment and credentials | Murat coordinates; all owners verify clients | Unverified | Record selected host, service targets and successful connections privately |
 | E5 | Full Tatras workflow | All three | Not run | Complete the acceptance matrix below on a recorded revision |
