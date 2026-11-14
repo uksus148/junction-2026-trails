@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from gopstop_agent.api_models import ApiPlace, ApiRoute
 from gopstop_agent.config import Settings
 from gopstop_agent.discovery import DiscoveryResult
+from gopstop_agent.diagnostics import stage
 from gopstop_agent.trails_api import HandoffError, TrailsApi
 
 
@@ -32,12 +33,15 @@ class RouteHandoff:
                     candidate = finding.place
                     key = (candidate.location.osm_type, candidate.location.osm_id)
                     if key not in by_osm:
-                        by_osm[key] = await self._api.ingest(candidate)
+                        with stage("ingestion"):
+                            by_osm[key] = await self._api.ingest(candidate)
                     visits.append(by_osm[key])
                 stops = visits[1:-1]
-                created = await self._api.create_route(visits[0], visits[-1], stops,
-                                                       discovery.intent.preferences)
-                saved = await self._api.get_route(created.id)
+                with stage("routing_cache"):
+                    created = await self._api.create_route(visits[0], visits[-1], stops,
+                                                           discovery.intent.preferences)
+                with stage("route_readback"):
+                    saved = await self._api.get_route(created.id)
                 self._api.check_stops(saved, stops)
                 # Deduplicate display records only; the route retains all requested visits.
                 unique = {}
