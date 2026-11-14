@@ -14,4 +14,4 @@ Provide commands or steps, inputs, and actual results. State any outstanding che
 
 ### Review
 
-Request review from both other developers; both approve before merge. For cross-service changes, the owner of the consuming component reviews the contract in detail.
+List the affected components and request review from their owners, excluding the author. State which integration boundary each reviewer should check. For an internal change with a single owner, choose a colleague with relevant expertise for an independent check. GitHub requires one independent approval.
