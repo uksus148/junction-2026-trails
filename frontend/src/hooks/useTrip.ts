@@ -35,6 +35,9 @@ export function useTrip() {
       if (res.routeId) {
         showRoute(await api.getRoute(res.routeId))
         setChatPlaces(res.places)
+        // The chat route replaces any start/finish picked on the map earlier, so stale points can't win.
+        setStart(null)
+        setEnd(null)
         return
       }
       setChatPlaces([])

@@ -3,7 +3,7 @@ import type { GeoJSONSource, MapMouseEvent } from 'maplibre-gl'
 import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url'
 import { useEffect, useRef, useState } from 'react'
 import { boundsOf, sliceLineByFraction } from '../lib/geo'
-import { contextPlaces } from '../lib/places'
+import { routeEndpoints, uniqueById } from '../lib/places'
 import type { LatLon, Place, Route } from '../types'
 import type { PickMode } from '../hooks/useTrip'
 
@@ -57,25 +57,22 @@ function markerElement(spec: MarkerSpec, onSelect: (placeId: string) => void): H
   return el
 }
 
-const toLatLon = (coordinate: [number, number] | undefined): LatLon | null =>
-  coordinate ? { lat: coordinate[1], lon: coordinate[0] } : null
-
 /** Start and finish come from the chat's places when it returned them, otherwise from the track's ends. */
+/** With a route, A and B sit on the track ends; before one exists, they show the points picked on the map. */
 function endpointSpecs(props: MapViewProps): MarkerSpec[] {
-  const coordinates = props.route?.geojson.coordinates ?? []
-  const extra = contextPlaces(props.route?.places ?? [], props.chatPlaces)
-  const startPlace = extra.find((p) => p.id === props.chatPlaces[0]?.id)
-  const endPlace = extra.find((p) => p.id === props.chatPlaces.at(-1)?.id && p.id !== startPlace?.id)
-  const start = props.start ?? startPlace ?? toLatLon(coordinates[0])
-  const end = props.end ?? endPlace ?? (props.route ? toLatLon(coordinates.at(-1)) : null)
+  const endpoints = props.route
+    ? routeEndpoints(props.route, props.chatPlaces)
+    : { start: props.start && { point: props.start }, end: props.end && { point: props.end } }
+  const { start, end } = endpoints
   return [
-    ...(start ? [{ point: start, label: 'A', title: startPlace?.name ?? 'Start', variant: 'start' as const, placeId: startPlace?.id }] : []),
-    ...(end ? [{ point: end, label: 'B', title: endPlace?.name ?? 'Finish', variant: 'end' as const, placeId: endPlace?.id }] : []),
+    ...(start ? [{ point: start.point, label: 'A', title: start.place?.name ?? 'Start', variant: 'start' as const, placeId: start.place?.id }] : []),
+    ...(end ? [{ point: end.point, label: 'B', title: end.place?.name ?? 'Finish', variant: 'end' as const, placeId: end.place?.id }] : []),
   ]
 }
 
 function markerSpecs(props: MapViewProps): MarkerSpec[] {
-  const routePlaces = props.route?.places ?? props.places
+  // Repeated visits keep their order in the route but get one marker per place.
+  const routePlaces = uniqueById(props.route?.places ?? props.places)
   return [
     ...endpointSpecs(props),
     ...routePlaces.map((p, i) => ({ point: p, label: String(i + 1), title: p.name, variant: 'place' as const, placeId: p.id })),
