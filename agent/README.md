@@ -55,6 +55,14 @@ keeps unknown endpoints null, and never asks the model for coordinates. The
 adapter is tested with HTTP fixtures and is connected to chat in the next
 discovery block. There are no live provider calls in the test suite.
 
+Blank endpoints become null, and blank list items are removed before validation.
+If the result still exceeds five intermediate stops or twelve preferences,
+`extract()` raises `IntentClarificationRequired` with a user-facing `question`.
+The chat integration must return that question in its normal reply rather than
+reporting a provider outage; valid stops are not silently discarded. Transport,
+HTTP, and malformed-response failures remain `ProviderError`. HTTP chat wiring
+is outside this block, so its current behavior is unchanged.
+
 Set `ANTHROPIC_API_KEY` in the root `.env`. `AGENT_ANTHROPIC_MODEL` follows the
 team-plan default `claude-haiku-5-5`; select a model available to the team's account
 before live testing. Each extractor request has a 20-second timeout by default;

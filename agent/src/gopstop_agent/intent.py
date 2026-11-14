@@ -3,11 +3,23 @@
 from typing import Annotated, Literal, TypedDict
 
 import httpx
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, ValidationError, field_validator
+
+
+MAX_STOPS = 5
+MAX_PREFERENCES = 12
 
 
 class ProviderError(Exception):
     """An upstream response could not be used; never expose its body to clients."""
+
+
+class IntentClarificationRequired(Exception):
+    """The caller should ask this question instead of reporting an outage."""
+
+    def __init__(self, question: str) -> None:
+        self.question = question
+        super().__init__(question)
 
 
 class Message(TypedDict):
@@ -23,8 +35,20 @@ class RouteIntent(BaseModel):
 
     start: Name | None = None
     end: Name | None = None
-    mustSee: list[Name] = Field(default_factory=list, max_length=5)
-    preferences: list[Name] = Field(default_factory=list, max_length=12)
+    mustSee: list[Name] = Field(default_factory=list, max_length=MAX_STOPS)
+    preferences: list[Name] = Field(default_factory=list, max_length=MAX_PREFERENCES)
+
+    @field_validator("start", "end", mode="before")
+    @classmethod
+    def normalize_empty_endpoint(cls, value: object) -> object:
+        return None if isinstance(value, str) and not value.strip() else value
+
+    @field_validator("mustSee", "preferences", mode="before")
+    @classmethod
+    def drop_blank_items(cls, value: object) -> object:
+        if isinstance(value, list):
+            return [item for item in value if not (isinstance(item, str) and not item.strip())]
+        return value
 
 
 class ClaudeIntentExtractor:
@@ -69,5 +93,16 @@ class ClaudeIntentExtractor:
             if len(calls) != 1:
                 raise ProviderError("Expected exactly one intent.")
             return RouteIntent.model_validate(calls[0]["input"])
+        except ValidationError as exc:
+            questions = {
+                ("mustSee",): f"Please choose at most {MAX_STOPS} intermediate stops for this hike.",
+                ("preferences",): f"Please choose at most {MAX_PREFERENCES} preferences for this hike.",
+            }
+            errors = exc.errors()
+            if all(error["type"] == "too_long" and error["loc"] in questions for error in errors):
+                question = " ".join(questions[location] for location in questions
+                                    if any(error["loc"] == location for error in errors))
+                raise IntentClarificationRequired(question) from None
+            raise ProviderError("Intent extraction returned invalid data.") from exc
         except (httpx.HTTPError, ValueError, KeyError, TypeError, AttributeError) as exc:
             raise ProviderError("Intent extraction is temporarily unavailable.") from exc

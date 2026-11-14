@@ -3,7 +3,7 @@ import json
 import httpx
 import pytest
 
-from gopstop_agent.intent import ClaudeIntentExtractor, ProviderError
+from gopstop_agent.intent import ClaudeIntentExtractor, IntentClarificationRequired, ProviderError
 
 
 def tool_response(intent):
@@ -55,7 +55,7 @@ async def test_unknown_endpoints_remain_unknown():
         {"type": "tool_use", "name": "extract_route_intent", "input": {}},
     ]},
     tool_response({"start": {"lat": 49, "lon": 20}}),
-    tool_response({"end": " "}), tool_response({"mustSee": ["x"] * 6}),
+    tool_response({"mustSee": [None]}),
     tool_response({"preferences": "scenery"}), tool_response({"invented": True}),
 ])
 async def test_rejects_incomplete_or_invalid_provider_output(body):
@@ -97,3 +97,41 @@ async def test_non_json_provider_response_is_rejected():
     )) as client:
         with pytest.raises(ProviderError):
             await ClaudeIntentExtractor(client, "fixture", "model").extract("Find Skok", [])
+
+
+@pytest.mark.parametrize("payload,expected", [
+    ({"start": "", "end": " \t ", "mustSee": [" ", " Skok waterfall ", ""],
+      "preferences": ["", " wild scenery ", " \t "]},
+     {"start": None, "end": None, "mustSee": ["Skok waterfall"], "preferences": ["wild scenery"]}),
+    ({"mustSee": ["Skok"] + [" "] * 10},
+     {"start": None, "end": None, "mustSee": ["Skok"], "preferences": []}),
+])
+async def test_normalizes_empty_model_values_before_validating_limits(payload, expected):
+    async with httpx.AsyncClient(transport=httpx.MockTransport(
+        lambda _: httpx.Response(200, json=tool_response(payload)),
+    )) as client:
+        result = await ClaudeIntentExtractor(client, "fixture", "model").extract("Find Skok", [])
+    assert result.model_dump() == expected
+
+
+@pytest.mark.parametrize("payload,expected_questions", [
+    ({"mustSee": [f"stop {i}" for i in range(6)]}, ["at most 5 intermediate stops"]),
+    ({"preferences": [f"preference {i}" for i in range(13)]}, ["at most 12 preferences"]),
+    ({"mustSee": [f"stop {i}" for i in range(6)],
+      "preferences": [f"preference {i}" for i in range(13)]},
+     ["at most 5 intermediate stops", "at most 12 preferences"]),
+])
+async def test_excess_items_ask_for_clarification_without_reporting_an_outage(payload, expected_questions):
+    requests = []
+
+    def handle(request):
+        requests.append(request)
+        return httpx.Response(200, json=tool_response(payload))
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handle)) as client:
+        with pytest.raises(IntentClarificationRequired) as error:
+            await ClaudeIntentExtractor(client, "fixture", "model").extract("Plan my hike", [])
+    assert not isinstance(error.value, ProviderError)
+    assert all(question in error.value.question for question in expected_questions)
+    assert "unavailable" not in error.value.question
+    assert len(requests) == 1
