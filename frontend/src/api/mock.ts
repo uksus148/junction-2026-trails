@@ -22,7 +22,7 @@ export const mockApi: ApiClient = {
     const route = await buildRoute(DEMO_START, DEMO_END, places.slice(0, -1), DEMO_ASCENT_M)
     return {
       reply:
-        'Here is a route from Štrbské Pleso past Skok waterfall and Popradské pleso up to Rysy. ' +
+        'Here is a route from Štrbské Pleso past Skok waterfall to Popradské pleso. ' +
         'Scroll the strip below to see the views on each part of the trail. (Demo data: the AI agent is not connected yet.)',
       places: [startPlace, ...places],
       routeId: route.id,
