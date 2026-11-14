@@ -1,6 +1,6 @@
 # Repository rules
 
-These rules apply to Murad (`uksus148`), Daniil (`nnatthebest`), and Mukhamed (`dyksookelwe`). Both collaborators have write access. Murad owns the repository and follows the same code review process.
+These rules apply to Murat (`uksus148`), Daniil (`nnatthebest`), and Mukhamed (`dyksookelwe`). Both collaborators have write access. Murat owns the repository and follows the same code review process.
 
 ## Main branch protection
 
@@ -35,7 +35,7 @@ GitHub requires one approval. For shared contract decisions, collect the affecte
 
 ## Project context and language
 
-The root CLAUDE.md holds architecture, the shared API contract, and team decisions. Murad's local file provides the initial baseline, translated into English. Each developer compares it with their notes and proposes updates through PRs. Service instructions and short team briefs link to this canonical file.
+The root CLAUDE.md holds architecture, the shared API contract, and team decisions. Murat's local file provides the initial baseline, translated into English. Each developer compares it with their notes and proposes updates through PRs. Service instructions and short team briefs link to this canonical file.
 
 README describes the project and setup. CONTRIBUTING.md defines commit, PR, and review conventions. This document describes branch protection. Write all repository files and GitHub collaboration content in English.
 

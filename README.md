@@ -9,9 +9,9 @@ The required demo route runs through the High Tatras, from Štrbské Pleso to Ry
 | Directory | Purpose and stack | Owner |
 |---|---|---|
 | frontend/ | Map, chat, places, and photos · React, Vite, Tailwind, MapLibre | Daniil · nnatthebest |
-| api/ | Data, geospatial queries, routes, and uploads · Java, Spring Boot | Murad · uksus148 |
+| api/ | Data, geospatial queries, routes, and uploads · Java, Spring Boot | Murat · uksus148 |
 | agent/ | Chat, Exa search, photo processing, and embeddings · Python, FastAPI | Mukhamed · dyksookelwe |
-| infra/ | Local database and environment checks · Docker Compose | Murad |
+| infra/ | Local database and environment checks · Docker Compose | Murat |
 
 Planned shared services are Aiven PostgreSQL with PostGIS and pgvector, Valkey, and Kafka. The API uses OpenRouteService for hiking routes. The agent searches through Exa and retains source links.
 

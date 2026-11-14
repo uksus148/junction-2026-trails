@@ -12,7 +12,7 @@ This file is the team's single source of truth for developers and AI assistants.
 - Use descriptive branch names such as `feat/places-bbox`, `fix/route-distance`, `docs/api-contract`, `infra/local-database`, or `chore/dependencies`.
 - The `codex/` prefix is prohibited for new branches.
 - Follow [CONTRIBUTING.md](CONTRIBUTING.md) and the [repository rules](docs/REPOSITORY_RULES.md).
-- Review this file before changing the code. Follow Murad's current task and agree shared contract changes with the affected developers.
+- Review this file before changing the code. Follow Murat's current task and agree shared contract changes with the affected developers.
 
 ## Challenges (draft submitted on November 13 at 23:59)
 
@@ -89,7 +89,7 @@ Agree changes with the affected developers and record them here.
 
 ```text
 /frontend — Daniil
-/api      — Murad
+/api      — Murat
 /agent    — Mukhamed
 /infra    — local Docker Compose and database extension initialization
 ```
@@ -98,7 +98,7 @@ Application tables are managed by Flyway migrations in `api`. Keep credentials i
 
 ## Team and tasks
 
-### Murad — backend, Java, Spring Boot, SQL, Docker, tests
+### Murat — backend, Java, Spring Boot, SQL, Docker, tests
 
 1. Set up the monorepo, `.gitignore`, `.env.example`, and Docker Compose for local PostgreSQL, PostGIS, and pgvector.
 2. Set up Aiven PostgreSQL Free and enable `postgis` and `vector`. Application tables are `places`, `photos`, `routes`, and `route_places`.
@@ -152,7 +152,7 @@ claude mcp add --transport http exa https://mcp.exa.ai/mcp
 
 Role-specific skills listed in the original team plan follow.
 
-- Murad — `ecc:springboot-patterns`, `ecc:springboot-tdd`, `ecc:postgres-patterns`, `ecc:docker-patterns`, `ecc:java-reviewer` agent.
+- Murat — `ecc:springboot-patterns`, `ecc:springboot-tdd`, `ecc:postgres-patterns`, `ecc:docker-patterns`, `ecc:java-reviewer` agent.
 - Mukhamed — `ecc:fastapi-patterns`, `ecc:exa-search`, `claude-api`, `ecc:rag-pipeline-reviewer` agent, `ecc:redis-patterns`, compatible with Valkey.
 - Daniil — `ecc:react-patterns`, `impeccable` or `ecc:frontend-design-direction`, frontend slides or `anthropic-skills:pptx`, video work through `ecc:remotion-video-creation`.
 - Everyone — `ecc:api-design`, `code-review`, and a final `ecc:security-review` for committed credentials.
