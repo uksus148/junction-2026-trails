@@ -104,11 +104,11 @@ curl -i 'http://localhost:8080/api/places' \
   -d '{"name":"Skok waterfall","lat":49.1536,"lon":20.0417,"tags":["waterfall","nature"]}'
 ```
 
-The implementation returns HTTP **201 Created** and a `Place` with a generated UUID, the supplied coordinates, `photos: []`, and server-assigned `source: "manual"`. This completes the frontend's existing `addPlace` operation. The frontend and agent owners confirmed these manual-write semantics in [PR #33](https://github.com/uksus148/junction-2026-trails/pull/33); they are recorded in the canonical [API contract](../CLAUDE.md#api-contract). Researched provenance, OSM deduplication, and route handoff remain subject to separate agreement.
+Without provenance, the implementation returns HTTP **201 Created** and a `Place` with a generated UUID, the supplied coordinates, `photos: []`, and server-assigned `source: "manual"`. These manual-write semantics were confirmed in [PR #33](https://github.com/uksus148/trego/pull/33) and the canonical [API contract](../CLAUDE.md#api-contract). The accepted researched-write extension is implemented in this branch; see [ingestion behavior, concurrency and review evidence](INGESTION.md).
 
-Name, latitude, longitude, and tags are required. Name must contain non-whitespace characters; coordinates must be finite and within WGS84 ranges. Tags may be empty; each supplied entry must be non-null and non-blank. Names and tags are stripped of surrounding whitespace, and repeated tags are removed while preserving order and case. An input `source` field cannot override the server-assigned value. Invalid or malformed input returns HTTP 400 and does not insert a row. Recognized input errors have a dedicated exception mapping; unexpected failures remain server errors.
+Name, latitude, longitude, and tags are required. Name must contain non-whitespace characters; coordinates must be finite and within WGS84 ranges. Tags may be empty; each supplied entry must be non-null and non-blank. Names and tags are stripped of surrounding whitespace, and repeated tags are removed while preserving order and case. Clients omit `source`; unknown fields now return HTTP 400 under the accepted ingestion contract. Invalid or malformed input inserts no row. Recognized input/storage errors have dedicated mapping; unexpected failures remain server errors.
 
-The creation transaction finishes before the response is returned. A subsequent matching bbox/tag search returns the created place. Creation does not perform name-based deduplication; separate requests create separate records. The read and write paths use the original Flyway schema, with no migration rewrite.
+The creation transaction finishes before the response is returned. A subsequent matching bbox/tag search returns the created place. Manual requests create independent records. Researched writes deduplicate by OSM type/id and return the first canonical record with HTTP 200 on replay. Flyway V3 adds identity columns and constraints without rewriting V1/V2.
 
 ## Verify
 
@@ -127,7 +127,7 @@ The API workflow runs these checks for API, database image, or workflow changes.
 2. [NewPlace](src/main/java/io/junction/trails/places/model/NewPlace.java) and [BoundingBox](src/main/java/io/junction/trails/places/model/BoundingBox.java) enforce input invariants at construction. [Place](src/main/java/io/junction/trails/places/model/Place.java) defines the response snapshot.
 3. [PlaceService](src/main/java/io/junction/trails/places/application/PlaceService.java) owns transactions, source assignment, and response mapping.
 4. [PlaceEntity](src/main/java/io/junction/trails/places/persistence/PlaceEntity.java) maps the existing schema; [PlaceRepository](src/main/java/io/junction/trails/places/persistence/PlaceRepository.java) supplies JPA persistence and native spatial queries.
-5. [PlaceExceptionHandler](src/main/java/io/junction/trails/places/web/PlaceExceptionHandler.java) maps known place-input failures to HTTP 400.
-6. [V1 migration](src/main/resources/db/migration/V1__create_places.sql) remains the schema owner. [PlaceApiTest](src/test/java/io/junction/trails/places/web/PlaceApiTest.java) verifies the complete HTTP-to-PostGIS path.
+5. [PlaceExceptionHandler](src/main/java/io/junction/trails/places/web/PlaceExceptionHandler.java) maps known input failures to HTTP 400 and storage failures to 503.
+6. Flyway owns schema changes: [V1](src/main/resources/db/migration/V1__create_places.sql) creates places and [V3](src/main/resources/db/migration/V3__add_place_osm_identity.sql) adds researched identity. [PlaceApiTest](src/test/java/io/junction/trails/places/web/PlaceApiTest.java) verifies HTTP-to-PostGIS behavior and concurrent replay.
 
 Maven generates compiled classes, reports, and the application JAR under `target/`. Source changes belong under `src/`.

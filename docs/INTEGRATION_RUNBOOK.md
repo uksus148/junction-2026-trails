@@ -3,7 +3,9 @@
 This is the shared execution and diagnostic guide for Murat, Mukhamed, and Daniil.
 Read it before changing a service boundary, preparing an integration environment,
 or reporting an end-to-end result. Last checked: November 14, 2026, against
-`main` at `b51e4d0` (through merged #43), plus the resolution-cache follow-up under review.
+`main` at `440f69d` (merged #39-#44). E1 below is [PR #45](https://github.com/uksus148/trego./pull/45),
+`feat/sourced-place-ingestion`, rebased onto that main; it is not merged. The live API
+check ran before rebase; the agent session check used an isolated `b51e4d0` snapshot.
 
 ## Authority and keeping the team aligned
 
@@ -32,19 +34,23 @@ Replace pending evidence with a PR/run link and tested revision; retain useful h
 | ID | Work | Owner | State at the checked revision | Evidence / next gate |
 |---|---|---|---|---|
 | B1 | Manual places and persisted hiking routes | Murat | Merged | #33, #39; real database/provider-fixture checks |
-| B2 | Required 24-hour routing cache | Murat | Merged | #41; 147 API tests and Java 21/infra CI passed; live Aiven check pending |
+| B2 | Required 24-hour routing cache | Murat | Merged; sequential live reuse verified | #41; [live Aiven/ORS evidence](#e4-live-backend-evidence); concurrent miss coalescing is not implemented |
 | B3 | Discovery and internal API handoff | Mukhamed | Merged internally | #31, #40; fixtures do not enable HTTP chat |
 | B4 | Frontend route/source/error compatibility | Daniil | Merged | #35-#37; live browser acceptance pending |
-| B5 | Reuse source-grounded Claude resolutions | Mukhamed | Prepared; awaiting review/merge | [#44](https://github.com/uksus148/trego./pull/44), tested `38ba99f`: 202 agent fixture tests pass; three rather than six resolution calls across two same-input requests; live latency unmeasured |
-| E1 | Researched place ingestion and OSM deduplication | Murat | Not implemented | Blocks actual agent-to-API ingestion |
-| E2 | HTTP chat orchestration and total deadline | Mukhamed | Merged; default disabled | [#43](https://github.com/uksus148/trego./pull/43), both approvals at `b83382d`, merged as `b51e4d0`; 172 agent fixture tests passed; E1/E4 block live use |
+| B5 | Reuse source-grounded Claude resolutions | Mukhamed | Merged | [#44](https://github.com/uksus148/trego./pull/44), main `440f69d`; 202 agent fixture tests; live latency unmeasured |
+| E1 | Researched place ingestion and OSM deduplication | Murat | Implemented; awaiting independent review | [#45](https://github.com/uksus148/trego./pull/45); [185 API tests and real-client smoke](../api/INGESTION.md); affected-owner review pending |
+| E2 | HTTP chat orchestration and total deadline | Mukhamed | Merged; default disabled | [#43](https://github.com/uksus148/trego./pull/43), both approvals at `b83382d`, merged as `b51e4d0`; E1 and live Claude/Exa access block activation |
 | E3 | Real-service frontend verification | Daniil | Pending | Disable mocks; verify direct/chat routes, sources, markers and errors |
-| E4 | Integration environment and credentials | Murat coordinates; all owners verify clients | Unverified | Record selected host, service targets and successful connections privately |
+| E4 | Integration environment and credentials | Murat coordinates; all owners verify clients | Backend Aiven/ORS preflight passed; AI access pending | [Live evidence](#e4-live-backend-evidence); Claude/Exa keys and account/model access still need Mukhamed; shared-schema deployment remains gated by E1 review |
 | E5 | Full Tatras workflow | All three | Not run | Complete the acceptance matrix below on a recorded revision |
 
-The current manual place endpoint ignores provenance and assigns `source: "manual"`.
-The agent's researched-place client rejects that response after a possible committed
-write. Do not use that path as a fallback or probe it repeatedly with live findings.
+Before E1, the merged manual endpoint ignored provenance and assigned `source: "manual"`;
+the agent rejected that response after a possible committed write. E1 removes this mismatch
+in its implementation branch; enable the shared live flow only after review/merge. Invalid
+provenance must never fall back to manual creation.
+The working branch incorporates #43 and #44. Compatibility evidence includes agent
+fixture tests and a real Python handoff -> Spring/local data services smoke with fixture ORS.
+This does not activate live chat or complete E5.
 
 ## Implementation responsibilities and merge gates
 
@@ -112,8 +118,9 @@ against the same main revision. These steps do not authorize merging unreviewed 
 
 **Proposed first diagnostic topology:** run API, agent and frontend on one computer,
 with a dedicated test database on Aiven PostgreSQL and the team's Aiven Valkey service.
-Murat coordinates access; each owner confirms their client. Record the selected topology
-in the first test report. This document does not provision services or authorize new spending.
+Murat coordinates access; each owner confirms their client. The backend E4 check below
+uses an isolated schema in the team's existing database, not a newly provisioned database.
+Record the selected topology in the first test report. This document does not provision services or authorize new spending.
 
 | Profile | Purpose | Data services |
 |---|---|---|
@@ -157,6 +164,12 @@ secret examples. The table below is a configuration checklist, not a file contai
 | `API_CORS_ALLOWED_ORIGINS` | `http://localhost:5173`, unquoted comma-separated origins |
 | `AGENT_CORS_ORIGINS` | `["http://localhost:5173"]`, JSON list |
 
+Keep `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_PORT`, and
+`VALKEY_PORT` for local Docker only. For Aiven, set the complete cloud database URL,
+username and password in the dedicated `SPRING_DATASOURCE_*` fields. Copy the cloud
+port and database name from that service; do not reuse `${POSTGRES_PORT}` or
+`${POSTGRES_DB}` in its JDBC URL. Set both Valkey client URLs to the chosen cloud target.
+
 Use PostgreSQL `sslmode=verify-full` with the appropriate Aiven CA certificate. Enable
 PostGIS and vector in the selected database before Flyway; verify startup migrations and
 Hibernate validation. Keep Valkey TLS peer verification enabled; convert an Aiven `valkeys://`
@@ -199,7 +212,7 @@ mvn spring-boot:run
 ```sh
 cd agent
 uv sync --frozen --extra test
-uv run --frozen uvicorn gopstop_agent.main:app --host 127.0.0.1 --port 8000 --log-config logging.json
+uv run --frozen uvicorn gopstop_agent.main:app --app-dir src --host 127.0.0.1 --port 8000 --log-config logging.json
 ```
 
 ```sh
@@ -271,10 +284,47 @@ corrupt entries, failures and cancellation. Repeated HTTP requests keep sourced 
 history and saved route IDs while avoiding three repeated place-resolution calls.
 The HTTP test exercises actual discovery/handoff factories, sourced API records,
 saved-route readback, follow-up history, clarification/no-route, safe errors and
-cancellation at every chat stage. No paid calls, live Aiven or browser acceptance
-were run; this evidence does not complete E1, E3, E4 or E5.
+cancellation at every chat stage. Those fixture checks made no paid/live Aiven calls
+and did not exercise browser acceptance; they do not complete E1, E3, E4 or E5.
 
 E5 is complete only with reviewed E1/E2, a real fetchable route displayed in the browser,
 retained research sources, a stored successful exchange, and evidence from the selected live
 data services. Link the report from the completing PR and update this ledger. A placeholder
 200, component CI pass, or an approved design alone does not complete E5.
+
+## E4 live backend evidence
+
+Started November 14, 2026, at 19:46 Europe/Helsinki, by Murat's assistant on his
+workstation. API artifact: E1 implementation above `d4c91e9`, before publication/rebase;
+agent session preflight: isolated current-main snapshot `b51e4d0` (#43).
+This deliberately records two revisions; it is not same-main E5 acceptance.
+
+- PostgreSQL authenticated with `sslmode=verify-full` and the downloaded CA. Server
+  version 18.7; enabled PostGIS 3.6.4 and pgvector 0.8.7. Local Docker port/database
+  placeholders were removed from the private cloud JDBC URL; local Docker fields were preserved.
+- API started with Flyway V1-V3 and Hibernate schema validation in a uniquely named
+  temporary schema. The shared application's schema was not migrated by this check.
+- One live `foot-hiking` request from `{lat:49.119,lon:20.063}` to
+  `{lat:49.120,lon:20.064}`, with no intermediate places and a unique diagnostic
+  preference, returned 201 in 1,357 ms. ORS supplied a 24-point LineString, 0.252 km,
+  18 m ascent and 3.025 minutes. Saved GET returned 200 with the same full Route.
+- The exact request's Aiven Valkey entry had 86,399 seconds remaining. After stopping
+  and restarting only the temporary API with an empty ORS key, the same POST returned
+  201 with a distinct saved UUID and identical track/metrics. A miss cannot call ORS
+  without its key. Remaining TTL was 86,388 seconds, confirming reuse without refresh.
+  This check exercised one live provider miss and a subsequent hit; it does not prove
+  concurrent first-miss coalescing.
+- After deleting only that diagnostic cache entry, saved GET still returned the first
+  route. The API was stopped and only its temporary schema and cache entry removed.
+  Those diagnostic route UUIDs are no longer fetchable after cleanup.
+- The current-main agent used its managed real Aiven Valkey client with chat disabled.
+  An in-process ASGI POST returned 200, saved/read a complete two-message exchange with
+  a 24-hour TTL, and passed CORS for `http://localhost:5173`. Its unique session was
+  deleted. This proves session connectivity, not live discovery or browser interaction.
+
+The redacted local report is `api/target/e4-live-report.json` (ignored generated output).
+Private credentials and certificate paths stay in the ignored root `.env`; no keys are
+published. Backend connectivity/cache/ORS are verified. E4 as a whole still requires
+Claude/Exa credentials and verified model/account access. Leave `AGENT_CHAT_ENABLED=false`
+until reviewed E1 is merged and those checks pass. The publication branch includes #43/#44.
+E3 browser acceptance and the full sourced Tatras E5 workflow remain pending.
