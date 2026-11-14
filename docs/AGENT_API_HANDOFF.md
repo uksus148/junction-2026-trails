@@ -4,6 +4,7 @@
 block 3 of [the agent plan](AGENT_PLAN.md), following merged PR #31. It does not
 enable HTTP discovery, implement API writes, or change the published contract.
 The accepted decisions are published in [CLAUDE.md](../CLAUDE.md#accepted-sourced-place-and-route-handoff).
+Track current implementation gates and live evidence in the [integration runbook](INTEGRATION_RUNBOOK.md).
 
 ## Scope and ownership
 

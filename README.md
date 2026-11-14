@@ -28,11 +28,18 @@ cd trego
 cp .env.example .env
 ```
 
-The local database requires Docker and Docker Compose. PostgreSQL 18, PostGIS, pgvector, and a configurable port are prepared in [PR #1](https://github.com/uksus148/trego/pull/1), which includes setup instructions and CI results. The frontend is under review in [PRs #4–10](https://github.com/uksus148/trego/pulls). Each service adds its run commands to its own directory as implementation progresses.
+Local infrastructure provides PostgreSQL 18 with PostGIS and pgvector, plus Valkey,
+through Docker Compose with configurable ports. Follow [the infrastructure guide](infra/README.md)
+and the service run instructions in [api](api/README.md), [agent](agent/README.md), and
+[frontend](frontend/README.md). The integration runbook below distinguishes merged components
+from the remaining work and live acceptance.
 
 Aiven Free has been verified with PostgreSQL 18.7, PostGIS 3.6.4, and pgvector 0.8.7. Share service credentials through a private channel. Git ignores the local `.env`.
 
 For backend development, start with the [API code map, run commands, and review order](api/README.md).
+
+All three developers coordinate service boundaries, environment setup, and the first complete
+chat-to-route test through the [integration runbook](docs/INTEGRATION_RUNBOOK.md).
 
 ## Shared contract and project language
 
