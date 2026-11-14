@@ -5,8 +5,12 @@ from typing import Protocol
 
 from redis.asyncio import Redis
 
+from gopstop_agent.intent import Message
+
 
 class SessionStore(Protocol):
+    async def history(self, session_id: str) -> list[Message]: ...
+
     async def record_exchange(self, session_id: str, user_message: str, reply: str) -> None: ...
 
 
@@ -19,6 +23,11 @@ class ValkeySessionStore:
     @staticmethod
     def _key(session_id: str) -> str:
         return f"gopstop:chat-session:{session_id}"
+
+    async def history(self, session_id: str) -> list[Message]:
+        # Six complete exchanges keep token use bounded, independently of retention.
+        items = await self._client.lrange(self._key(session_id), -12, -1)
+        return [json.loads(item) for item in items]
 
     async def record_exchange(self, session_id: str, user_message: str, reply: str) -> None:
         key = self._key(session_id)

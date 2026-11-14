@@ -12,6 +12,9 @@ python -m venv .venv
 pip install -e '.[test]'
 ```
 
+For reproducible installs with uv, run `uv sync --frozen --extra test` instead;
+`uv.lock` is committed alongside `pyproject.toml`.
+
 Settings load from the repository root `.env` and process environment. Set `AGENT_VALKEY_URL` to a Redis-compatible Valkey URL; when it is unset, the service also accepts the shared `SPRING_DATA_REDIS_URL` variable. The default is `redis://localhost:6379/0`. `AGENT_SESSION_TTL_SECONDS` defaults to 86400 (one day), and `AGENT_SESSION_MAX_MESSAGES` defaults to 200 messages per session (must be even so history is retained in complete user/assistant exchanges). Start the API with:
 
 ```sh
@@ -43,3 +46,16 @@ Content-Type: application/json
 The response follows the shared contract: `{ "reply": string, "places": [] }`, with `routeId` omitted until a route is available. Invalid payloads return FastAPI's `422` validation response. If Valkey is unavailable, the service returns `503` and does not claim that the message was saved.
 
 Run automated tests with `pytest`.
+
+## Intent extraction
+
+`ClaudeIntentExtractor` uses Claude tool use and validates the internal
+`{start, end, mustSee[], preferences[]}` result. It accepts recent session history,
+keeps unknown endpoints null, and never asks the model for coordinates. The
+adapter is tested with HTTP fixtures and is connected to chat in the next
+discovery block. There are no live provider calls in the test suite.
+
+Set `ANTHROPIC_API_KEY` in the root `.env`. `AGENT_ANTHROPIC_MODEL` follows the
+team-plan default `claude-haiku-5-5`; select a model available to the team's account
+before live testing. `AGENT_PROVIDER_TIMEOUT_SECONDS` defaults to 20. No automatic
+paid retries are performed. Live account/model availability has not been verified.
