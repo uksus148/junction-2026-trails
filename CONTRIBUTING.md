@@ -1,4 +1,4 @@
-# Contributing
+# Contributing to trego.
 
 Create a task branch from the current `main` and open a pull request that can be reviewed independently. English is the project language for repository files, code comments, documentation, commit messages, PR titles, descriptions, and reviews.
 

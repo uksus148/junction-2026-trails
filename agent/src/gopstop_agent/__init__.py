@@ -1,1 +1,1 @@
-"""GOPSTOP.PROTOCOL AI agent service."""
+"""trego. AI agent service."""

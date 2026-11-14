@@ -11,7 +11,7 @@
     <groupId>io.junction.trails</groupId>
     <artifactId>api</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>Trails API</name>
+    <name>trego. API</name>
     <properties>
         <java.version>21</java.version>
         <!-- PostgreSQL 18 support is newer than the version managed by Spring Boot. -->

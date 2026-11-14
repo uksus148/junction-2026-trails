@@ -1,4 +1,4 @@
-# Frontend
+# trego. Frontend
 
 React 19 + TypeScript + Vite + Tailwind 4 + MapLibre (OpenFreeMap tiles, no key needed).
 

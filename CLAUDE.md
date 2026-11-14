@@ -1,4 +1,4 @@
-# GOPSTOP.PROTOCOL — Junction 2026
+# trego. — Junction 2026
 
 An AI hiking navigator. Users describe what they want to see in chat or mark places on a map
 (castles, waterfalls, scenic views) and receive a walking route from A to B through those places,
@@ -7,6 +7,8 @@ with real photos of views along the way and links to their sources.
 This file is the team's single source of truth for developers and AI assistants. Update it whenever a decision is made.
 
 ## Project language and branches
+
+- The product name is **trego.**, lowercase with the trailing period. The GitHub repository slug is `trego`.
 
 - English is the project language. Write repository files, code comments, documentation, commit messages, PR titles, descriptions, and reviews in English.
 - Use descriptive branch names such as `feat/places-bbox`, `fix/route-distance`, `docs/api-contract`, `infra/local-database`, or `chore/dependencies`.
@@ -211,6 +213,8 @@ Role-specific skills listed in the original team plan follow.
 - Everyone — `ecc:api-design`, `code-review`, and a final `ecc:security-review` for committed credentials.
 
 ## Decision log
+
+- November 14 — Murat confirmed the product name **trego.**. Use this spelling in documentation and visible product names; the GitHub repository is `uksus148/trego`.
 
 - November 13 — Main challenge is Exa Internet Butler, technical challenge is Aiven. The product delegates live web research and presents sources.
 - November 13 — Use partner credits and free tiers for the project budget.

@@ -1,4 +1,4 @@
-# Places API
+# trego. Places API
 
 Use JDK 21 or newer, Maven 3.6.3+ and Docker Compose. The project targets Java 21 with Spring Boot 3.5.16, and CI runs on Java 21. Flyway 11.14.1 is pinned for PostgreSQL 18 support. Run application commands from `api/`; Spring reads the shared root `.env` as a properties file. Environment variables override values from that file.
 

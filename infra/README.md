@@ -1,4 +1,4 @@
-# Local development database
+# trego. Local infrastructure
 
 PostgreSQL 18 with PostGIS and pgvector matches the major version selected by Aiven Free. Install Docker with Compose and choose a free local port.
 
