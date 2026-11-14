@@ -66,5 +66,22 @@ describe('extractTimeWindow', () => {
 
   it('does not take a count of people for a start time', () => {
     expect(extractTimeWindow('план на день в Братиславе с 2 детьми')).toEqual({})
+    expect(extractTimeWindow('plan a day out from 2 friends')).toEqual({})
+  })
+
+  it('honours am and pm on both ends', () => {
+    expect(extractTimeWindow('Plan my day from 2pm until 6pm')).toEqual({ startTime: '14:00', endTime: '18:00' })
+    expect(extractTimeWindow('from 9am to 1pm')).toEqual({ startTime: '09:00', endTime: '13:00' })
+    expect(extractTimeWindow('from 9:30 a.m. until 5:15 p.m.')).toEqual({ startTime: '09:30', endTime: '17:15' })
+    expect(extractTimeWindow('from 10 to 6pm')).toEqual({ startTime: '10:00', endTime: '18:00' })
+  })
+
+  it('maps 12am to midnight and 12pm to noon', () => {
+    expect(extractTimeWindow('from 12pm until 5pm')).toEqual({ startTime: '12:00', endTime: '17:00' })
+    expect(extractTimeWindow('starting at 12am')).toEqual({ startTime: '00:00' })
+  })
+
+  it('ignores impossible 12-hour times', () => {
+    expect(extractTimeWindow('from 13pm')).toEqual({})
   })
 })

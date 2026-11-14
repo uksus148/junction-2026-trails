@@ -72,29 +72,48 @@ export function extractPreferencesPatch(text: string): Partial<Preferences> {
   }
 }
 
-const START_TIME = /(?<!\p{L})(?:from|starting(?:\s+at)?|с|от)\s+(\d{1,2})(?:[:.](\d{2}))?(?!\d)(\s*(?:am|pm|h|o'?clock|час|утра))?/iu
-const END_TIME = /(?<!\p{L})(?:until|till|to|до)\s+(\d{1,2})(?:[:.](\d{2}))?(?!\d)/iu
+// Hour, optional minutes, optional suffix (am/pm or a unit such as "h", "o'clock", "час", "утра").
+const CLOCK = "(\\d{1,2})(?:[:.](\\d{2}))?(?!\\d)\\s*(a\\.?m\\.?|p\\.?m\\.?|h|o'?clock|час\\p{L}*|утра)?(?!\\p{L})"
+const START_TIME = new RegExp(`(?<!\\p{L})(?:from|starting(?:\\s+at)?|с|от)\\s+${CLOCK}`, 'iu')
+const END_TIME = new RegExp(`(?<!\\p{L})(?:until|till|to|до)\\s+${CLOCK}`, 'iu')
 const LAST_HOUR = 23
 const NOON_HOUR = 12
 
-type ClockMatch = { minutes: number; explicit: boolean }
+type ClockMatch = { minutes: number; explicit: boolean; hasMeridiem: boolean }
+
+function meridiemOf(suffix: string | undefined): 'am' | 'pm' | undefined {
+  const letters = suffix?.toLowerCase().replace(/[^a-z]/g, '')
+  return letters === 'am' || letters === 'pm' ? letters : undefined
+}
 
 function clockFrom(pattern: RegExp, text: string): ClockMatch | undefined {
   const match = pattern.exec(text)
-  if (!match || Number(match[1]) > LAST_HOUR) return undefined
-  return { minutes: Number(match[1]) * 60 + Number(match[2] ?? 0), explicit: match[2] !== undefined || Boolean(match[3]) }
+  if (!match) return undefined
+  const hour = Number(match[1])
+  const meridiem = meridiemOf(match[3])
+  if (meridiem ? hour < 1 || hour > NOON_HOUR : hour > LAST_HOUR) return undefined
+  const hour24 = meridiem ? (hour % NOON_HOUR) + (meridiem === 'pm' ? NOON_HOUR : 0) : hour
+  return {
+    minutes: hour24 * 60 + Number(match[2] ?? 0),
+    explicit: match[2] !== undefined || Boolean(match[3]),
+    hasMeridiem: meridiem !== undefined,
+  }
 }
 
 /**
- * "from 10 to 6" means until 18:00. A bare number after "с/from" only counts as a time
- * when it looks like one (has minutes, a unit, or an end time follows) — "с 2 детьми" is not 02:00.
+ * "from 10 to 6" means until 18:00 unless am/pm says otherwise. A bare number after "from" only counts
+ * as a time when it looks like one (minutes, am/pm or a unit, or an end time follows), so
+ * "from 2 friends" is not 02:00. The patterns also accept Russian phrasing.
  */
 export function extractTimeWindow(text: string): { startTime?: string; endTime?: string } {
   const end = clockFrom(END_TIME, text)
   const start = clockFrom(START_TIME, text)
   const startMin = start && (start.explicit || end) ? start.minutes : undefined
-  const afternoon = (min: number) => (startMin !== undefined && min <= startMin && min < NOON_HOUR * 60 ? min + NOON_HOUR * 60 : min)
-  const endMin = end && afternoon(end.minutes)
+  const afternoon = (clock: ClockMatch) =>
+    !clock.hasMeridiem && startMin !== undefined && clock.minutes <= startMin && clock.minutes < NOON_HOUR * 60
+      ? clock.minutes + NOON_HOUR * 60
+      : clock.minutes
+  const endMin = end && afternoon(end)
   const validEnd = endMin !== undefined && (startMin === undefined || endMin > startMin) ? endMin : undefined
   return {
     ...(startMin !== undefined && { startTime: fromMinutes(startMin) }),
