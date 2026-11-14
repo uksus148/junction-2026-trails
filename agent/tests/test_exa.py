@@ -112,3 +112,41 @@ async def test_blank_query_does_not_call_cache_or_provider():
         await ExaSearch(web, redis, "fixture").search("  ")
     redis.get.assert_not_awaited()
     web.post.assert_not_awaited()
+
+
+@pytest.mark.parametrize("bad", [
+    {"url": "ftp://example.org/bad"}, {"title": "missing URL"},
+    {"url": "https://example.org/bad", "title": "x" * 2001},
+])
+async def test_mixed_results_keep_valid_sources_and_cache_them(cache, bad):
+    rows = [{"url": "https://example.org/first"}, bad, {"url": "https://example.org/second"}]
+    calls = []
+
+    def handle(request):
+        calls.append(request)
+        return httpx.Response(200, json={"results": rows})
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handle)) as client:
+        search = ExaSearch(client, cache, "fixture")
+        for _ in range(2):
+            sources = await search.search("waterfalls")
+            assert [str(s.sourceUrl) for s in sources] == [
+                "https://example.org/first", "https://example.org/second",
+            ]
+    assert len(calls) == 1
+
+
+async def test_cache_write_failure_propagates_after_one_paid_call():
+    redis = AsyncMock()
+    redis.get.return_value = None
+    redis.set.side_effect = ConnectionError("fixture write outage")
+    calls = []
+
+    def handle(request):
+        calls.append(request)
+        return httpx.Response(200, json={"results": []})
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handle)) as client:
+        with pytest.raises(ConnectionError):
+            await ExaSearch(client, redis, "fixture").search("trail")
+    assert len(calls) == 1

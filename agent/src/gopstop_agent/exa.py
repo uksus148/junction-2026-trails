@@ -54,10 +54,20 @@ class ExaSearch:
             results = response.json()["results"]
             if not isinstance(results, list):
                 raise ValueError("Expected search results.")
-            sources = [ResearchSource(
-                title=item.get("title") or item["url"], sourceUrl=item["url"],
-                text=item.get("text") or "",
-            ) for item in results[:3]]
+            sources = []
+            for item in results:
+                try:
+                    source = ResearchSource(
+                        title=item.get("title") or item["url"], sourceUrl=item["url"],
+                        text=item.get("text") or "",
+                    )
+                except (ValueError, KeyError, TypeError, AttributeError):
+                    continue
+                sources.append(source)
+                if len(sources) == 3:
+                    break
+            if results and not sources:
+                raise ProviderError("Place research returned no usable sources.")
         except (httpx.HTTPError, ValueError, KeyError, TypeError, AttributeError) as exc:
             raise ProviderError("Place research is temporarily unavailable.") from exc
         await self._redis.set(key, sources_adapter.dump_json(sources), ex=CACHE_TTL_SECONDS)
