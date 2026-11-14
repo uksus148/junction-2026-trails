@@ -1,7 +1,7 @@
 package io.junction.trails.places.web;
 
 import io.junction.trails.config.ApiWebConfiguration;
-import io.junction.trails.places.persistence.PlaceRepository;
+import io.junction.trails.places.application.PlaceService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -23,7 +23,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Import(ApiWebConfiguration.class)
 class PlaceCorsConfigurationTest {
     @MockitoBean
-    PlaceRepository places;
+    PlaceService places;
 
     @Autowired
     MockMvc browser;

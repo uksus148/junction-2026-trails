@@ -1,6 +1,7 @@
 package io.junction.trails.places.web;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import io.junction.trails.places.application.PlaceService;
 import java.nio.file.Path;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -15,6 +16,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.images.builder.ImageFromDockerfile;
@@ -23,6 +25,9 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.Mockito.doThrow;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -55,6 +60,9 @@ class PlaceSearchTest {
 
     @Autowired
     JdbcClient jdbc;
+
+    @MockitoSpyBean
+    PlaceService places;
 
     @BeforeEach
     void seedPlaces() {
@@ -146,6 +154,15 @@ class PlaceSearchTest {
         var response = http.getForEntity("/api/places?bbox=20,49,21,50&tags=castle,,waterfall", JsonNode.class);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(response.getBody().get("detail").asText()).contains("tags");
+    }
+
+    @Test
+    void keepsUnexpectedIllegalArgumentsAsServerErrors() {
+        doThrow(new IllegalArgumentException("internal implementation details"))
+                .when(places).search(any(), anyList());
+        var response = http.getForEntity("/api/places?bbox=20,49,21,50", String.class);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(response.getBody()).doesNotContain("internal implementation details");
     }
 
     @ParameterizedTest
