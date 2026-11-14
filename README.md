@@ -32,6 +32,8 @@ The local database requires Docker and Docker Compose. PostgreSQL 18, PostGIS, p
 
 Aiven Free has been verified with PostgreSQL 18.7, PostGIS 3.6.4, and pgvector 0.8.7. Share service credentials through a private channel. Git ignores the local `.env`.
 
+For backend development, start with the [API code map, run commands, and review order](api/README.md).
+
 ## Shared contract and project language
 
 The API contract section in [CLAUDE.md](CLAUDE.md) defines the baseline. Day-planning and personalization proposals are listed in the [contract review](docs/CONTRACT_REVIEW.md). Affected developers discuss changes and record the agreement in CLAUDE.md.

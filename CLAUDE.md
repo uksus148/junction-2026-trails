@@ -109,6 +109,10 @@ Discussed in [docs/CONTRACT_REVIEW.md](docs/CONTRACT_REVIEW.md). Move items into
 
 Application tables are managed by Flyway migrations in `api`. Keep credentials in a local `.env`, which is ignored by Git. Commit `.env.example` with empty secret fields. Every service, including the frontend, reads the single root `.env`.
 
+### Java API organization
+
+The Spring Boot API is a single Maven module. Group Java packages by feature under `io.junction.trails`. The current `places` feature separates HTTP handlers in `web`, framework-independent data and value objects in `model`, and SQL access in `persistence`. Future `routes` and `photos` features follow the same feature-based organization, with business workflows introduced as they are implemented. Tests mirror production package paths. Flyway migrations remain in `api/src/main/resources/db/migration` for the shared application schema. See the [API code map and review order](api/README.md#code-map).
+
 ### Frontend
 
 - React 19, TypeScript, Vite 8, Tailwind 4 and MapLibre 6 with OpenFreeMap tiles. The UI is in English.
