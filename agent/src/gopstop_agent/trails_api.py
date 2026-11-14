@@ -102,3 +102,7 @@ class TrailsApi:
     def check_stops(route: ApiRoute, stops: list[ApiPlace]) -> None:
         if [place.id for place in route.places] != [place.id for place in stops]:
             raise HandoffError("Trail API returned different route stops.")
+        for actual, expected in zip(route.places, stops):
+            # Photo indexing can progress independently; canonical place/source data cannot change on replay.
+            if actual.model_dump(exclude={"photos"}) != expected.model_dump(exclude={"photos"}):
+                raise HandoffError("Trail API returned inconsistent place records.")

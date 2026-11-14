@@ -60,6 +60,11 @@ class ApiFixture:
             return httpx.Response(404, json=problem("route_not_found", 404))
         if self.failure == "get_stop_order":
             self.saved_route["places"].reverse()
+        if self.failure == "source_changed":
+            # Return a detached readback so the previously ingested fixtures stay authoritative.
+            changed = json.loads(json.dumps(self.saved_route))
+            changed["places"][0]["source"] = "manual"
+            return httpx.Response(200, json=changed)
         return httpx.Response(200, json=self.saved_route)
 
 
@@ -121,7 +126,7 @@ async def test_incomplete_discovery_never_writes(missing):
     assert fixture.calls == []
 
 
-@pytest.mark.parametrize("failure", ["no_route", "storage", "missing_route", "stop_order", "get_stop_order"])
+@pytest.mark.parametrize("failure", ["no_route", "storage", "missing_route", "stop_order", "get_stop_order", "source_changed"])
 async def test_route_failure_returns_no_result_and_keeps_prior_places_without_retry(failure):
     fixture = ApiFixture(failure)
     expected = NoHikingRoute if failure == "no_route" else HandoffError
