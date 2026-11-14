@@ -5,6 +5,7 @@ import io.junction.trails.places.model.Place;
 import io.junction.trails.places.persistence.PlaceRepository;
 import java.util.Arrays;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -13,12 +14,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@RequiredArgsConstructor
 class PlaceController {
     private final PlaceRepository places;
-
-    PlaceController(PlaceRepository places) {
-        this.places = places;
-    }
 
     @GetMapping("/api/places")
     List<Place> search(@RequestParam String bbox, @RequestParam(defaultValue = "") String tags) {
