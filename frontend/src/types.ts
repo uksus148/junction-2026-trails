@@ -1,5 +1,5 @@
 // Shared API contract — the agreed baseline from the root CLAUDE.md ("API contract").
-// Change only together with the api and agent owners.
+// Day-plan types below are a proposal (docs/CONTRACT_REVIEW.md) until the api and agent owners agree.
 
 export type LatLon = { lat: number; lon: number }
 
@@ -13,6 +13,24 @@ export type Photo = {
   lon: number
 }
 
+export type Pace = 'relaxed' | 'normal' | 'intense'
+/** Max price level the user accepts: 0 free, 1 €, 2 €€, 3 €€€ */
+export type Budget = 0 | 1 | 2 | 3
+export type CrowdLevel = 0 | 1 | 2
+
+export type Preferences = {
+  interests: string[]
+  dislikes: string[]
+  pace: Pace
+  maxWalkKm: number
+  budget: Budget
+  avoidCrowds: boolean
+}
+
+export type PlanMode = 'route' | 'day'
+
+export type OpeningHours = { open: string; close: string } // 'HH:MM'
+
 export type Place = {
   id: string
   name: string
@@ -21,6 +39,11 @@ export type Place = {
   tags: string[]
   photos: Photo[]
   source: string
+  // Optional, used by the day planner. Missing values fall back to defaults.
+  dwellMin?: number
+  priceLevel?: Budget
+  crowdLevel?: CrowdLevel
+  openingHours?: OpeningHours
 }
 
 export type LineString = {
@@ -46,6 +69,53 @@ export type Route = {
 
 export type ChatRequest = { sessionId: string; message: string }
 export type ChatResponse = { reply: string; places: Place[]; routeId?: string }
+
+export type StopStatus = 'planned' | 'done' | 'skipped'
+export type TravelMode = 'walk' | 'transit'
+
+export type ItineraryStop = {
+  place: Place
+  arriveAt: string // 'HH:MM' — when the visit starts
+  leaveAt: string
+  travelMin: number
+  travelKm: number
+  travelMode: TravelMode
+  status: StopStatus
+}
+
+export type DropReason = 'dislike' | 'budget' | 'closed' | 'no_time' | 'walk_limit' | 'skipped_by_user'
+export type DroppedPlace = { place: Place; reason: DropReason }
+
+export type DayPlan = {
+  start: LatLon
+  startTime: string
+  endTime: string
+  /** Time from which the not-yet-done part of the day is planned (moves on replan). */
+  resumeAt: string
+  candidates: Place[] // every place considered for the day
+  preferences: Preferences
+  stops: ItineraryStop[]
+  dropped: DroppedPlace[]
+  walkKm: number
+}
+
+export type Itinerary = DayPlan & { id: string; route: Route }
+
+export type ItineraryRequest = {
+  start: LatLon
+  placeIds: string[]
+  preferences: Preferences
+  startTime: string
+  endTime: string
+}
+
+export type ReplanRequest = {
+  now: string
+  location?: LatLon
+  skipPlaceIds: string[]
+  donePlaceIds: string[]
+  preferences?: Preferences
+}
 
 export type NewPlace = { name: string; lat: number; lon: number; tags: string[] }
 
