@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from pydantic import AliasChoices, Field, RedisDsn, SecretStr
+from pydantic import AliasChoices, Field, HttpUrl, RedisDsn, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -28,3 +28,9 @@ class Settings(BaseSettings):
     exa_api_key: SecretStr = Field(default="", validation_alias="EXA_API_KEY")
     anthropic_model: str = "claude-haiku-5-5"
     provider_timeout_seconds: float = Field(default=20, gt=0, le=60)
+    discovery_timeout_seconds: float = Field(default=60, gt=0, le=180)
+    nominatim_base_url: HttpUrl = "https://nominatim.openstreetmap.org"
+    nominatim_user_agent: str = Field(
+        default="GopstopTrails/0.1 (https://github.com/uksus148/junction-2026-trails)",
+        min_length=8,
+    )

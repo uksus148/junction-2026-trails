@@ -10,25 +10,28 @@ approve new endpoints, fields, tables, or Kafka event schemas.
 - PR #20 is merged: FastAPI chat, Valkey sessions, CORS, and storage timeouts.
 - PR #26 is merged: Claude hiking intent, recent history, validation, and
   clarification for excessive stops/preferences. Live Claude remains unverified.
+- PR #28 is merged: Exa text evidence with source URLs and a 24-hour Valkey cache.
 - HTTP chat still uses `{sessionId, message}` -> `{reply, places, routeId?}`.
 - Spring Boot owns persisted places, routes, uploads, SQL, and Flyway migrations.
-- [PR #27](https://github.com/uksus148/junction-2026-trails/pull/27) proposes
+- [PR #27](https://github.com/uksus148/junction-2026-trails/pull/27) is merged:
   GET /api/places, a Flyway places table, UUID IDs, and HTTP 400 Problem Details.
-  It is pending owner review; place creation and route handoff remain separate.
+  API CORS and the client header fix (#29) are merged too. Place creation and
+  route handoff remain separate.
 - Mukhamed implements the agent; Murat owns the API/storage boundary; Daniil owns
   the frontend/chat boundary. Request both teammates for each agent PR.
 
 ## Sequential blocks
 
 Finish review, fixes, applicable checks, and merge before starting another block.
-Create branches from current main and keep each PR near 400 hand-written lines;
-split a block further when needed. Reuse preserved work after checking its diff
+Create branches from current main. The current discovery increment combines the
+provider and orchestration blocks in one PR below 1000 hand-written changed lines,
+as Mukhamed requested. Reuse preserved work after checking its diff
 against current contracts. Closed PRs #23–#25 are references, not a merge queue.
 
 | Order | Block | Done when |
 |---|---|---|
-| 1 | Exa text research and Valkey caching, prepared in this PR | Sources retain URLs; repeated queries use a 24-hour cache; fixtures cover failures and credit conservation |
-| 2 | Source-grounded place resolution and Nominatim geocoding | Names resolve to unique WGS84 coordinates with attribution; ambiguous results ask for clarification; geocoder rate limits and caches are tested |
+| 1 | Exa text research and Valkey caching, merged in #28 | Sources retain URLs; repeated queries use a 24-hour cache; mixed-result resilience is included in the current discovery increment |
+| 2 | Source-grounded resolution, Nominatim, and internal discovery, prepared in this PR | A request yields ordered sourced findings with unique WGS84 coordinates and attribution; ambiguous/missing places stay unresolved; shared rate limits, caching, and overall deadlines are tested |
 | 3 | API ingestion and route handoff agreement | Murat, Mukhamed, and Daniil review example payloads, provenance, identifiers, ordering, and errors; accepted decisions are recorded in CLAUDE.md |
 | 4 | Chat-to-route orchestration | Intent, research, geocoding, API persistence, and routing follow the agreed contract; frontend fetches and displays the returned persisted route |
 | 5 | Licensed photos along the hike | Each displayed photo has author, license, sourceUrl, and coordinates; routes/photos follow the existing units and segment shapes |
@@ -44,9 +47,10 @@ allowed until block 5. Day planning and personalization drafts remain deferred.
 These questions need the affected owners' answers, not unilateral agent changes:
 
 - **Place ingestion: Murat + Mukhamed, with Daniil reviewing consumption.**
-  `POST /api/places` currently accepts only name, lat, lon, and tags for manual
-  creation. Agree how researched source URLs and OSM identity are persisted and
-  deduplicated. Confirm API-issued identifier representation and success/error
+  The baseline specifies `POST /api/places` with name, lat, lon, and tags for
+  manual creation; the write handler is not implemented yet. Agree how researched
+  sources and OSM identity are persisted and deduplicated. Use the UUID strings
+  established by the read API; confirm write response/error and idempotency
   examples. Internal research evidence and geocoder IDs must not be sent as
   persisted `placeIds` until this mapping exists.
 - **Routing: Murat + Mukhamed + Daniil.** Keep the baseline route request and
@@ -77,8 +81,9 @@ affected owners' responses, even when GitHub's approval minimum is satisfied.
   routeId. Provider/storage failures remain honest errors; do not save a success
   for failed work. Set an overall request deadline, and validate required keys at
   startup only when the corresponding live feature is enabled.
-- Agree reply-language behavior with Daniil before displaying clarification
-  questions. Do not add day-mode fields to the existing chat request incidentally.
+- Daniil confirmed in PR #28 that replies and clarification questions follow the
+  user's message language, while UI labels stay English. Implement that at chat
+  wiring. Do not add day-mode fields to the existing chat request incidentally.
 - Root .env supplies all services; empty secrets stay in .env.example. Keep cache
   TTLs, explicit timeouts, and fixture-based tests; do not retry paid calls blindly.
 - Before the route MVP is accepted, run the Tatras request, a follow-up, and a
