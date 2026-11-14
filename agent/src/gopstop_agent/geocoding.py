@@ -2,15 +2,17 @@
 
 import asyncio
 import hashlib
+import json
 import math
-from typing import Literal
 from uuid import uuid4
 
 import httpx
-from pydantic import BaseModel, Field, TypeAdapter, ValidationError
+from pydantic import TypeAdapter, ValidationError
 from redis.asyncio import Redis
 
 from gopstop_agent.intent import ProviderError, ProviderTimeout
+from gopstop_agent.geocoding_candidates import GeocodingCandidate, select_candidate
+from gopstop_agent.geocoding_models import GeocodedPlace
 
 
 OSM_ATTRIBUTION = "© OpenStreetMap contributors — https://www.openstreetmap.org/copyright"
@@ -22,20 +24,8 @@ return 0
 """
 
 
-class GeocodedPlace(BaseModel):
-    osm_type: Literal["node", "way", "relation"]
-    osm_id: int = Field(gt=0)
-    display_name: str = Field(min_length=1, max_length=2000)
-    lat: float = Field(ge=-90, le=90)
-    lon: float = Field(ge=-180, le=180)
-
-    @property
-    def osm_url(self) -> str:
-        return f"https://www.openstreetmap.org/{self.osm_type}/{self.osm_id}"
-
-
-cached_location = TypeAdapter(GeocodedPlace | None)
-locations_adapter = TypeAdapter(list[GeocodedPlace])
+locations_adapter = TypeAdapter(list[GeocodingCandidate])
+SEARCH_OPTIONS = {"format": "jsonv2", "limit": 8, "namedetails": 1}
 
 
 class NominatimGeocoder:
@@ -49,16 +39,35 @@ class NominatimGeocoder:
         host_hash = hashlib.sha256(self._base_url.encode()).hexdigest()
         self._gate = f"gopstop:nominatim:gate:v1:{host_hash}"
 
-    async def geocode(self, query: str) -> GeocodedPlace | None:
+    async def geocode(self, query: str, *, name: str | None = None, tags: list[str] | None = None,
+                      anchors: list[GeocodedPlace] | None = None) -> GeocodedPlace | None:
         query = query.strip()
         if not query:
             raise ValueError("Geocoding query must not be blank.")
-        digest = hashlib.sha256((self._base_url + "|" + query).encode()).hexdigest()
-        key = f"gopstop:nominatim:result:v1:{digest}"
+        try:
+            async with asyncio.timeout(self._timeout_seconds):
+                candidates = await self._search(query)
+                parts = [part.strip() for part in query.split(",")]
+                # Preserve the supplied name and country; remove only intermediate
+                # region qualifiers after an empty response, never after an error.
+                if not candidates and len(parts) >= 3 and all(parts):
+                    candidates = await self._search(f"{parts[0]}, {parts[-1]}")
+                return select_candidate(candidates, name or parts[0], tags or [], anchors or [])
+        except (httpx.TimeoutException, TimeoutError) as exc:
+            raise ProviderTimeout("Place geocoding is temporarily unavailable.") from exc
+        except (httpx.HTTPError, ValueError, TypeError) as exc:
+            raise ProviderError("Place geocoding is temporarily unavailable.") from exc
+
+    async def _search(self, query: str) -> list[GeocodingCandidate]:
+        identity = json.dumps([self._base_url, query, SEARCH_OPTIONS], sort_keys=True)
+        digest = hashlib.sha256(identity.encode()).hexdigest()
+        # v1 cached a selected place/null for 24h. v2 retains candidates so a
+        # different category or geographic context cannot inherit an old decision.
+        key = f"gopstop:nominatim:search:v2:{digest}"
         cached = await self._redis.get(key)
         if cached is not None:
             try:
-                return cached_location.validate_json(cached)
+                return locations_adapter.validate_json(cached)
             except ValidationError:
                 pass
         try:
@@ -69,9 +78,9 @@ class NominatimGeocoder:
                     await asyncio.sleep(0.05)
                 try:
                     response = await self._client.get(
-                        self._base_url + "/search", timeout=self._timeout,
+                        self._base_url + "/search", timeout=self._timeout, follow_redirects=False,
                         headers={"User-Agent": self._user_agent},
-                        params={"q": query, "format": "jsonv2", "limit": 2},
+                        params={"q": query, **SEARCH_OPTIONS},
                     )
                     response.raise_for_status()
                     results = locations_adapter.validate_python(response.json())
@@ -83,6 +92,5 @@ class NominatimGeocoder:
             raise ProviderTimeout("Place geocoding is temporarily unavailable.") from exc
         except (httpx.HTTPError, ValueError, TypeError) as exc:
             raise ProviderError("Place geocoding is temporarily unavailable.") from exc
-        place = results[0] if len(results) == 1 else None
-        await self._redis.set(key, cached_location.dump_json(place), ex=86400)
-        return place
+        await self._redis.set(key, locations_adapter.dump_json(results), ex=86400 if results else 300)
+        return results
