@@ -1,4 +1,4 @@
-name: Database smoke test
+name: Infrastructure smoke tests
 
 on:
   pull_request:
@@ -23,15 +23,17 @@ jobs:
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
-      - name: Start a fresh database
-        run: docker compose up --build --wait --wait-timeout 120 db
+      - name: Start a fresh database and cache
+        run: docker compose up --build --wait --wait-timeout 120 db valkey
+      - name: Verify Valkey connectivity
+        run: test "$(docker compose exec -T valkey valkey-cli ping)" = "PONG"
       - name: Verify PostGIS and pgvector
         run: |
           docker compose exec -T db psql -X -v ON_ERROR_STOP=1 \
             -U "$POSTGRES_USER" -d "$POSTGRES_DB" < infra/smoke.sql
-      - name: Show database logs on failure
+      - name: Show infrastructure logs on failure
         if: failure()
-        run: docker compose logs db
+        run: docker compose logs db valkey
       - name: Remove the test database
         if: always()
         run: docker compose down --volumes
