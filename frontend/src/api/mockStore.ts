@@ -1,5 +1,5 @@
 import { haversineKm, round1, TRAIL_WINDING_FACTOR } from '../lib/geo'
-import type { LatLon, Photo, Place, Route, RouteSegment } from '../types'
+import type { Itinerary, LatLon, Photo, Place, Route, RouteSegment } from '../types'
 import { findPhotosNear } from './wikimedia'
 
 // Shared in-memory state for the mock backend.
@@ -11,6 +11,7 @@ const SAME_POINT_KM = 0.05
 
 let placeRegistry: ReadonlyMap<string, Place> = new Map()
 let routeRegistry: ReadonlyMap<string, Route> = new Map()
+let itineraryRegistry: ReadonlyMap<string, Itinerary> = new Map()
 let photoCache: ReadonlyMap<string, Photo[]> = new Map()
 
 export const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
@@ -44,6 +45,17 @@ export function getRoute(id: string): Route {
   const route = routeRegistry.get(id)
   if (!route) throw new Error(`Route ${id} not found`)
   return route
+}
+
+export function saveItinerary(itinerary: Itinerary): Itinerary {
+  itineraryRegistry = new Map([...itineraryRegistry, [itinerary.id, itinerary]])
+  return itinerary
+}
+
+export function getItinerary(id: string): Itinerary {
+  const itinerary = itineraryRegistry.get(id)
+  if (!itinerary) throw new Error(`Day plan ${id} not found`)
+  return itinerary
 }
 
 /** Straight lines between waypoints; real trail geometry comes from the api service. */

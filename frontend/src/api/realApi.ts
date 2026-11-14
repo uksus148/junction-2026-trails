@@ -22,4 +22,7 @@ export const realApi: ApiClient = {
   addPlace: (place) => request(`${API_URL}/api/places`, post(place)),
   createRoute: (req) => request(`${API_URL}/api/routes`, post(req)),
   getRoute: (id) => request(`${API_URL}/api/routes/${encodeURIComponent(id)}`),
+  createItinerary: (req) => request(`${API_URL}/api/itineraries`, post(req)),
+  getItinerary: (id) => request(`${API_URL}/api/itineraries/${encodeURIComponent(id)}`),
+  replan: (id, req) => request(`${API_URL}/api/itineraries/${encodeURIComponent(id)}/replan`, post(req)),
 }

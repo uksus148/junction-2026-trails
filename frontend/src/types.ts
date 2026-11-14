@@ -1,5 +1,5 @@
 // Shared API contract — the agreed baseline from the root CLAUDE.md ("API contract").
-// Day-plan types below are a proposal (docs/CONTRACT_REVIEW.md) until the api and agent owners agree.
+// Day-plan types and the chat/itinerary extensions are a proposal (docs/CONTRACT_REVIEW.md) until the api and agent owners agree.
 
 export type LatLon = { lat: number; lon: number }
 
@@ -67,8 +67,16 @@ export type Route = {
   segments: RouteSegment[]
 }
 
-export type ChatRequest = { sessionId: string; message: string }
-export type ChatResponse = { reply: string; places: Place[]; routeId?: string }
+export type ChatRequest = { sessionId: string; message: string; mode: PlanMode; preferences: Preferences }
+export type ChatResponse = {
+  reply: string
+  places: Place[]
+  mode: PlanMode
+  routeId?: string
+  itineraryId?: string
+  /** Preferences the agent understood from the message; the client merges them into the profile. */
+  preferencesPatch?: Partial<Preferences>
+}
 
 export type StopStatus = 'planned' | 'done' | 'skipped'
 export type TravelMode = 'walk' | 'transit'
@@ -133,4 +141,7 @@ export interface ApiClient {
   addPlace(place: NewPlace): Promise<Place>
   createRoute(request: RouteRequest): Promise<Route>
   getRoute(id: string): Promise<Route>
+  createItinerary(request: ItineraryRequest): Promise<Itinerary>
+  getItinerary(id: string): Promise<Itinerary>
+  replan(id: string, request: ReplanRequest): Promise<Itinerary>
 }
