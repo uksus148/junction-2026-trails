@@ -45,9 +45,9 @@ Replace pending evidence with a PR/run link and tested revision; retain useful h
 | B9 | Evidenced Nominatim candidate selection for #51 | Mukhamed | Under re-review; live control passed | [#52](https://github.com/uksus148/trego./pull/52), tested `ae6dc82`; 259 fixture tests; Daniil's live discovery/control browser evidence below; #49 still blocks Rysy |
 | E1 | Researched place ingestion and OSM deduplication | Murat | Merged | [#45](https://github.com/uksus148/trego./pull/45), both approvals; deploy V3 on the selected target |
 | E2 | HTTP chat orchestration and total deadline | Mukhamed | Merged; default disabled | [#43](https://github.com/uksus148/trego./pull/43); #47 adds selected Groq transport and live checks |
-| E3 | Real-service frontend verification | Daniil | Attempted; blocked by #51/#49 | Rerun with reviewed geocoding fix; verify direct/chat routes, sources, markers and errors |
-| E4 | Integration environment and credentials | Murat coordinates; all owners verify clients | Backend preflight and live intent/research/resolution passed; full agent preflight pending | [Live evidence](#e4-live-backend-evidence), #50 review; repeat complete agent preflight after #51 |
-| E5 | Full Tatras workflow | All three | Attempted; not accepted | [#51](https://github.com/uksus148/trego./issues/51) geocoding and [#49](https://github.com/uksus148/trego./issues/49) ORS/Rysy failure; complete the acceptance matrix on a recorded revision |
+| E3 | Real-service frontend verification | Daniil | Live control route verified; full matrix pending | [#52 review](https://github.com/uksus148/trego./pull/52), tested `ae6dc82`; control track/sources and Rysy no-route behavior passed; record remaining acceptance cases |
+| E4 | Integration environment and credentials | Murat coordinates; all owners verify clients | Backend preflight and live agent/control flow passed; consolidated preflight report pending | [Original backend evidence](#e4-live-backend-evidence) and #52 live review use distinct revisions; reconfirm the selected integrated target |
+| E5 | Full Tatras workflow | All three | Discovery passed; Rysy route blocked by #49 | #52 live discovery resolved all three objects; [#49](https://github.com/uksus148/trego./issues/49) still prevents the required route; control success is not full E5 acceptance |
 
 Before E1, the merged manual endpoint ignored provenance and assigned `source: "manual"`;
 the agent rejected that response after a possible committed write. E1 removes this mismatch
@@ -102,6 +102,31 @@ lake (way `4816134`, 49.1222049, 20.0577798), the High Tatras Skok waterfall
 used the independently resolved points, with no extra HTTP request. These are real
 public Nominatim calls through the changed adapter, with synthetic resolution inputs
 and a local fake cache; no live Groq, Exa, Aiven, API or ORS acceptance was run here.
+
+#### Daniil's live #51 acceptance evidence
+
+In [his approving #52 review](https://github.com/uksus148/trego./pull/52), Daniil
+reports testing `ae6dc82` on his Mac with Groq `openai/gpt-oss-20b`, Exa, public
+Nominatim, Aiven PostgreSQL/Valkey, live ORS through the API and frontend mocks off.
+This is teammate evidence on the pre-rebase PR snapshot, not a new run by this
+workspace or a public deployment of the merged API container.
+
+- All 259 tests passed with and without his real root `.env`.
+- Live Tatras discovery returned `ready=True`, `unresolved=[]`, with Štrbské Pleso
+  way `4816134`, Skok node `383862401` and Rysy node `1862536196`, matching the
+  intended objects above. Cold discovery took 46.5 s; a cached repeat took 1.0 s.
+- Browser Tatras chat returned 200, ingested the places, then received the expected
+  `NoHikingRoute` for Rysy (#49). It asked for another endpoint, returned no routeId
+  and left the map empty.
+- The control request, "I want to hike from Štrbské Pleso to Popradské pleso and see
+  the Skok waterfall on the way.", returned 200 in 37 s. Ingestion, routing, saved
+  route readback, handoff and reply passed. The browser displayed A -> Skok -> B
+  and reported 15.18 km, +746 m and about five hours in the user's language.
+
+These results confirm the #51 geocoding fix on that snapshot. Rebase reconciliation
+preserves the agent runtime/tests unchanged; fresh checks and both re-reviews still
+apply to the rebased head. Keep the required Rysy demo and remaining acceptance
+matrix pending; the control request does not replace the agreed scenario.
 
 Separately, [#49](https://github.com/uksus148/trego./issues/49), assigned to Murat,
 reports ORS code 2010 (no routable point within 350 m) for Rysy/Chata pod Rysmi.
