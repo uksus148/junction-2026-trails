@@ -68,7 +68,7 @@ function addRouteLayers(map: maplibregl.Map) {
 const lineFeature = (coordinates: [number, number][]) => ({ ...EMPTY_LINE, geometry: { type: 'LineString' as const, coordinates } })
 
 export function MapView(props: MapViewProps) {
-  const { route, selectedSegment, pickMode, onMapClick } = props
+  const { route, selectedSegment, places, pickMode, onMapClick } = props
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<maplibregl.Map | null>(null)
   const clickRef = useRef(onMapClick)
@@ -102,6 +102,16 @@ export function MapView(props: MapViewProps) {
     ;(map.getSource('route') as GeoJSONSource).setData(lineFeature(coords))
     if (coords.length > 1) map.fitBounds(boundsOf(coords), { padding: FIT_PADDING, duration: 900 })
   }, [route, loaded])
+
+  // Without a route, bring chosen places into view — but only when some are off-screen, so manual clicks don't move the map.
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !loaded || route || places.length === 0) return
+    const coords = places.map((p): [number, number] => [p.lon, p.lat])
+    const bounds = map.getBounds()
+    if (coords.every((c) => bounds.contains(c))) return
+    map.fitBounds(boundsOf(coords), { padding: FIT_PADDING, duration: 700, maxZoom: 13 })
+  }, [places, route, loaded])
 
   useEffect(() => {
     const map = mapRef.current

@@ -4,10 +4,19 @@ import { buildRoute, delay, getPlace, getRoute, MOCK_LATENCY_MS, photosNearSafe,
 
 // In-browser stand-in for api + agent so the frontend works before the backends exist.
 
+// "Find …" / "Where is …" exercise the contract case where chat returns places without a route.
+const FIND_ONLY_REQUEST = /^\s*(?:find|where|locate|show me)\b/i
+
 export const mockApi: ApiClient = {
-  async chat() {
+  async chat(request) {
     await delay(MOCK_LATENCY_MS)
     const places = (await Promise.all(DEMO_PLACES.map(withPhotos))).map(registerPlace)
+    if (FIND_ONLY_REQUEST.test(request.message)) {
+      return {
+        reply: `Found ${places.length} places. Set a start and a finish in "Plan on map" to build a route through them. (Demo data.)`,
+        places,
+      }
+    }
     const route = await buildRoute(DEMO_START, DEMO_END, places, DEMO_ASCENT_M)
     return {
       reply:
