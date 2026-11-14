@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { AlongTheWay } from './components/AlongTheWay'
 import { MapView } from './components/MapView'
 import { PhotoViewer } from './components/PhotoViewer'
+import { PlaceCard } from './components/PlaceCard'
 import { Sidebar } from './components/Sidebar'
 import { useTrip } from './hooks/useTrip'
 import type { Photo } from './types'
@@ -9,6 +10,9 @@ import type { Photo } from './types'
 export default function App() {
   const trip = useTrip()
   const [openPhoto, setOpenPhoto] = useState<Photo | null>(null)
+  const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null)
+  const knownPlaces = [...(trip.route?.places ?? []), ...trip.chatPlaces, ...trip.places]
+  const selectedPlace = knownPlaces.find((p) => p.id === selectedPlaceId) ?? null
 
   return (
     <div className="flex h-dvh flex-col md:flex-row">
@@ -20,10 +24,13 @@ export default function App() {
           start={trip.start}
           end={trip.end}
           places={trip.places}
+          chatPlaces={trip.chatPlaces}
           pendingPoint={trip.pendingPoint}
           pickMode={trip.pickMode}
           onMapClick={trip.handleMapClick}
+          onSelectPlace={setSelectedPlaceId}
         />
+        {selectedPlace && <PlaceCard place={selectedPlace} onClose={() => setSelectedPlaceId(null)} />}
         {trip.route && (
           <AlongTheWay route={trip.route} selectedSegment={trip.selectedSegment} onSelectSegment={trip.setSelectedSegment} onOpenPhoto={setOpenPhoto} />
         )}

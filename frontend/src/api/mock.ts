@@ -1,4 +1,4 @@
-import { DEMO_ASCENT_M, DEMO_END, DEMO_PLACES, DEMO_START } from '../data/tatras'
+import { DEMO_ASCENT_M, DEMO_END, DEMO_PLACES, DEMO_START, DEMO_START_PLACE } from '../data/tatras'
 import type { ApiClient, Place } from '../types'
 import { buildRoute, delay, getPlace, getRoute, MOCK_LATENCY_MS, photosNearSafe, registerPlace, withPhotos } from './mockStore'
 
@@ -17,12 +17,14 @@ export const mockApi: ApiClient = {
         places,
       }
     }
-    const route = await buildRoute(DEMO_START, DEMO_END, places, DEMO_ASCENT_M)
+    // Like the agreed handoff: the route lists only intermediate stops; chat returns start, stops and finish.
+    const startPlace = registerPlace(await withPhotos(DEMO_START_PLACE))
+    const route = await buildRoute(DEMO_START, DEMO_END, places.slice(0, -1), DEMO_ASCENT_M)
     return {
       reply:
         'Here is a route from Štrbské Pleso past Skok waterfall and Popradské pleso up to Rysy. ' +
         'Scroll the strip below to see the views on each part of the trail. (Demo data: the AI agent is not connected yet.)',
-      places,
+      places: [startPlace, ...places],
       routeId: route.id,
     }
   },
