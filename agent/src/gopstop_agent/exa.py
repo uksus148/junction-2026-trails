@@ -31,16 +31,19 @@ class ExaSearch:
         self._cache_namespace = cache_namespace
         self._timeout = httpx.Timeout(timeout_seconds)
 
-    async def search(self, query: str) -> list[ResearchSource]:
+    async def search(self, query: str, *, use_cache: bool = True,
+                     include_domains: tuple[str, ...] = ()) -> list[ResearchSource]:
         query = query.strip()
         if not query:
             raise ValueError("Search query must not be blank.")
         request_body = {"query": query, "type": "auto", "numResults": 3,
                         "contents": {"text": {"maxCharacters": 2000}}}
+        if include_domains:
+            request_body["includeDomains"] = list(include_domains)
         digest = hashlib.sha256(json.dumps(request_body, sort_keys=True).encode()).hexdigest()
         key = f"{self._cache_namespace}:{digest}"
         # Fail before spending credits when the cache is unavailable.
-        cached = await self._redis.get(key)
+        cached = await self._redis.get(key) if use_cache else None
         if cached is not None:
             try:
                 return sources_adapter.validate_json(cached)
@@ -49,7 +52,7 @@ class ExaSearch:
         try:
             response = await self._client.post(
                 "https://api.exa.ai/search", headers={"x-api-key": self._api_key},
-                json=request_body, timeout=self._timeout,
+                json=request_body, timeout=self._timeout, follow_redirects=False,
             )
             response.raise_for_status()
             results = response.json()["results"]
@@ -73,5 +76,6 @@ class ExaSearch:
             raise ProviderTimeout("Place research is temporarily unavailable.") from exc
         except (httpx.HTTPError, ValueError, KeyError, TypeError, AttributeError) as exc:
             raise ProviderError("Place research is temporarily unavailable.") from exc
-        await self._redis.set(key, sources_adapter.dump_json(sources), ex=CACHE_TTL_SECONDS)
+        if use_cache:
+            await self._redis.set(key, sources_adapter.dump_json(sources), ex=CACHE_TTL_SECONDS)
         return sources

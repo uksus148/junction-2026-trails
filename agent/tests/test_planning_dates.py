@@ -1,9 +1,11 @@
 from datetime import date
+import json
 
 import pytest
 from pydantic import ValidationError
 
 from gopstop_agent.availability_models import AvailabilityRequest, ResearchPolicy
+from gopstop_agent.api_models import ApiPlace
 from gopstop_agent.planning_dates import extract_planning_dates
 from test_trails_api import place
 
@@ -26,7 +28,10 @@ def test_missing_ambiguous_or_invalid_dates_need_clarification(text):
 
 def test_only_verified_routing_outcomes_can_enter_optional_research():
     with pytest.raises(ValidationError):
-        AvailabilityRequest(routingCode="routing_provider_error", places=[place(1), place(2)])
-    for host in ("https://authority.example", "authority.example/path", "authority.example@evil.test", "*.example"):
+        AvailabilityRequest(routingCode="routing_provider_error", places=[
+            ApiPlace.model_validate_json(json.dumps(place(i))) for i in (1, 2)
+        ])
+    for host in ("https://authority.example", "authority.example/path", "authority.example@evil.test",
+                 "*.example", "127.0.0.1", "-invalid.example"):
         with pytest.raises(ValidationError):
             ResearchPolicy(trustedHosts=(host,), maxSourceAgeDays=30)

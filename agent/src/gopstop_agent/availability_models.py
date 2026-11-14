@@ -30,7 +30,9 @@ class ResearchPolicy(InternalModel):
         for host in hosts:
             if not re.fullmatch(r"[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?", host) or "." not in host:
                 raise ValueError("Use explicit lowercase official hostnames.")
-            if HttpUrl("https://" + host).host != host or any(not part for part in host.split(".")):
+            if (HttpUrl("https://" + host).host != host or not any(c.isalpha() for c in host)
+                    or any(not re.fullmatch(r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?", part)
+                           for part in host.split("."))):
                 raise ValueError("Invalid official hostname.")
         return hosts
 
