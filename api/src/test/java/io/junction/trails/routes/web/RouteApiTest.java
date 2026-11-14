@@ -2,9 +2,11 @@ package io.junction.trails.routes.web;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.junction.trails.routes.application.RoutingGateway;
+import io.junction.trails.routes.cache.RoutingCacheKey;
 import io.junction.trails.routes.persistence.RoutePersistence;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -22,12 +24,14 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.transaction.CannotCreateTransactionException;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.images.builder.ImageFromDockerfile;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -35,7 +39,6 @@ import org.testcontainers.utility.DockerImageName;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 
@@ -61,6 +64,10 @@ class RouteApiTest {
                     .withFileFromPath("init-extensions.sql", Path.of("../infra/postgres/init-extensions.sql"))
                     .get()).asCompatibleSubstituteFor("postgres"));
 
+    @Container
+    static final GenericContainer<?> VALKEY = new GenericContainer<>("valkey/valkey:8.1-alpine")
+            .withExposedPorts(6379);
+
     @DynamicPropertySource
     static void properties(DynamicPropertyRegistry properties) {
         properties.add("spring.datasource.url", DATABASE::getJdbcUrl);
@@ -69,12 +76,18 @@ class RouteApiTest {
         properties.add("routing.ors.base-url", ORS::baseUrl);
         properties.add("routing.ors.api-key", () -> "fixture-key");
         properties.add("routing.ors.read-timeout", () -> "1s");
+        properties.add("spring.data.redis.url", () -> "redis://" + VALKEY.getHost()
+                + ":" + VALKEY.getMappedPort(6379) + "/0");
+        properties.add("spring.data.redis.timeout", () -> "500ms");
+        properties.add("spring.data.redis.connect-timeout", () -> "500ms");
     }
 
     @Autowired
     TestRestTemplate http;
     @Autowired
     JdbcClient jdbc;
+    @Autowired
+    StringRedisTemplate valkey;
     @MockitoSpyBean
     RoutingGateway routing;
     @MockitoSpyBean
@@ -83,6 +96,10 @@ class RouteApiTest {
     @BeforeEach
     void seed() throws IOException {
         ORS.reset();
+        var keys = valkey.keys(RoutingCacheKey.PREFIX + "*");
+        if (!keys.isEmpty()) {
+            valkey.delete(keys);
+        }
         jdbc.sql("TRUNCATE route_places, routes, places").update();
         jdbc.sql("""
                 INSERT INTO places (id,name,geom,tags,source) VALUES
@@ -103,7 +120,7 @@ class RouteApiTest {
         doAnswer(call -> {
             assertThat(TransactionSynchronizationManager.isActualTransactionActive()).isFalse();
             return call.callRealMethod();
-        }).when(routing).route(anyList());
+        }).when(routing).route(any());
         var response = create(List.of(SECOND, FIRST, SECOND));
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         JsonNode route = response.getBody();
@@ -145,13 +162,100 @@ class RouteApiTest {
     @Test
     void buildsADirectHikeAndRepeatedPostsCreateSeparateSavedRoutes() {
         var first = create(List.of());
+        ORS.respond(503, "{}", 0);
         var second = create(List.of());
         assertThat(first.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         assertThat(second.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         assertThat(first.getBody().get("places").toString()).isEqualTo("[]");
         assertThat(first.getBody().get("id")).isNotEqualTo(second.getBody().get("id"));
-        assertThat(ORS.getRequests()).hasSize(2);
+        assertThat(ORS.getRequests()).hasSize(1);
         assertThat(routeCount()).isEqualTo(2);
+    }
+
+    @Test
+    void expiresTracksAfterOneDayWithoutRefreshingTtlOnCacheHits() {
+        assertThat(create(List.of()).getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        String key = valkey.keys(RoutingCacheKey.PREFIX + "*").iterator().next();
+        assertThat(valkey.getExpire(key)).isBetween(86390L, 86400L);
+        valkey.expire(key, Duration.ofMinutes(1));
+        assertThat(create(List.of()).getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(valkey.getExpire(key)).isBetween(1L, 60L);
+        assertThat(ORS.getRequests()).hasSize(1);
+        valkey.expire(key, Duration.ZERO);
+        assertThat(create(List.of()).getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(ORS.getRequests()).hasSize(2);
+    }
+
+    @Test
+    void failsBeforeCallingOrsWhenValkeyTimesOutButStillReadsSavedRoutes() throws Exception {
+        var saved = create(List.of()).getBody();
+        VALKEY.execInContainer("valkey-cli", "CLIENT", "PAUSE", "10000", "ALL");
+        try {
+            long started = System.nanoTime();
+            var response = create(List.of());
+            assertProblem(response.getStatusCode(), response.getBody(), 503, "cache_unavailable");
+            assertThat(Duration.ofNanos(System.nanoTime() - started)).isLessThan(Duration.ofSeconds(5));
+            assertThat(http.getForEntity("/api/routes/" + saved.get("id").asText(), JsonNode.class).getBody())
+                    .isEqualTo(saved);
+            assertThat(ORS.getRequests()).hasSize(1);
+            assertThat(routeCount()).isEqualTo(1);
+        } finally {
+            VALKEY.execInContainer("valkey-cli", "CLIENT", "UNPAUSE");
+        }
+    }
+
+    @Test
+    void doesNotSaveWhenValkeyRejectsWritesAfterProviderSuccess() throws Exception {
+        // No replicas exist in this disposable container, so SET fails while GET still works.
+        assertThat(VALKEY.execInContainer("valkey-cli", "CONFIG", "SET", "min-replicas-to-write", "1")
+                .getStdout().strip()).isEqualTo("OK");
+        try {
+            var response = create(List.of());
+            assertProblem(response.getStatusCode(), response.getBody(), 503, "cache_unavailable");
+            assertThat(routeCount()).isZero();
+            assertThat(ORS.getRequests()).hasSize(1);
+            assertThat(valkey.keys(RoutingCacheKey.PREFIX + "*")).isEmpty();
+        } finally {
+            VALKEY.execInContainer("valkey-cli", "CONFIG", "SET", "min-replicas-to-write", "0");
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"not-json", "null", "{}",
+            "{\"points\":[{\"lat\":49,\"lon\":20},{\"lat\":50,\"lon\":21}],\"ascentM\":1,\"durationMin\":2}",
+            "{\"points\":[],\"distanceKm\":1,\"ascentM\":1,\"durationMin\":2}",
+            "{\"points\":[{\"lat\":49,\"lon\":20},{\"lat\":50,\"lon\":21}],\"distanceKm\":-1,\"ascentM\":1,\"durationMin\":2}"
+    })
+    void rejectsCorruptCacheEntriesWithoutSpendingProviderCredits(String value) {
+        assertThat(create(List.of()).getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        String key = valkey.keys(RoutingCacheKey.PREFIX + "*").iterator().next();
+        valkey.opsForValue().set(key, value, Duration.ofHours(24));
+        var response = create(List.of());
+        assertProblem(response.getStatusCode(), response.getBody(), 503, "cache_unavailable");
+        assertThat(ORS.getRequests()).hasSize(1);
+        assertThat(routeCount()).isEqualTo(1);
+    }
+
+    @Test
+    void cannotUseACachedTrackToBypassValidationOfReferencedPlaces() {
+        assertThat(create(List.of(FIRST)).getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        jdbc.sql("DELETE FROM route_places").update();
+        jdbc.sql("DELETE FROM places WHERE id=:id").param("id", UUID.fromString(FIRST)).update();
+        var response = create(List.of(FIRST));
+        assertProblem(response.getStatusCode(), response.getBody(), 422, "unknown_place");
+        assertThat(ORS.getRequests()).hasSize(1);
+        assertThat(routeCount()).isEqualTo(1);
+    }
+
+    @Test
+    void changedPersistedCoordinatesCannotReuseTheOldTrack() {
+        assertThat(create(List.of(FIRST)).getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        jdbc.sql("UPDATE places SET geom=ST_SetSRID(ST_MakePoint(20.06,49.06),4326) WHERE id=:id")
+                .param("id", UUID.fromString(FIRST)).update();
+        assertThat(create(List.of(FIRST)).getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(ORS.getRequests()).hasSize(2);
+        assertThat(ORS.getRequests().get(1).body().get("coordinates").get(1).toString())
+                .isEqualTo("[20.06,49.06]");
     }
 
     @Test

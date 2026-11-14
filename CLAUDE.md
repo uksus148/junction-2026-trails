@@ -133,11 +133,28 @@ Route errors use Problem Details with English detail and stable codes: 400 `inva
 synthetic routes or ordinary no-route results. POST has no automatic retries or idempotency
 guarantee; separate requests can create separate saved route IDs.
 
-Murat explicitly staged the required Valkey routing cache in the next focused PR. The first
-slice makes one bounded, uncached provider request per valid POST. The cache-staging amendment
-is recorded in PR #34 for affected-owner confirmation before integration; it does not silently
-remove the team's 24-hour cache requirement. `cache_unavailable` applies when the required
-cache is introduced. See [the route implementation and review guide](api/ROUTES.md).
+Murat explicitly staged the required Valkey routing cache in a separate focused PR.
+[Mukhamed confirmed this rollout from the agent side](https://github.com/uksus148/trego/pull/39#pullrequestreview-5904312512):
+the reviewed routing baseline in #39 may merge first, followed immediately by the cache PR.
+The uncached baseline makes one bounded provider request per valid POST. This staged delivery
+preserves the team's 24-hour cache requirement and does not establish live agent/MVP acceptance.
+See [the route implementation and review guide](api/ROUTES.md).
+
+### Routing cache selected by Murat
+
+The follow-up to merged #39 adds an explicit `CachedRoutingGateway` backed by **Aiven Valkey**
+in deployment. Local development and tests use a disposable Valkey container. This follow-up
+restores the required 24-hour routing cache before completed-flow integration.
+Cache only validated provider tracks, not persisted route IDs. Hash the complete creation
+request, resolved ordered coordinates, provider endpoint, and versioned fixed routing options.
+Preserve visit order and repeated UUIDs. Cache hits do not refresh TTL; every successful POST
+still saves a separate route before HTTP 201. GET of a saved route needs neither ORS nor Valkey.
+
+Read, write, timeout, and corrupt-entry failures return 503 `cache_unavailable`. A failed read
+prevents provider work; a failed cache write prevents route persistence even if ORS already
+consumed quota. Do not retry ORS or silently bypass the required cache. Check referenced places
+before cache access. Concurrent first misses can still issue duplicate provider requests;
+distributed request coalescing requires a separate decision before relying on that guarantee.
 
 ### Proposed extension: personalization and day plan — not agreed yet
 

@@ -23,7 +23,7 @@ class RouteExceptionHandler {
             case INVALID_REQUEST -> HttpStatus.BAD_REQUEST;
             case UNKNOWN_PLACE, NO_HIKING_ROUTE -> HttpStatus.UNPROCESSABLE_ENTITY;
             case ROUTING_PROVIDER_ERROR -> HttpStatus.BAD_GATEWAY;
-            case STORAGE_UNAVAILABLE -> HttpStatus.SERVICE_UNAVAILABLE;
+            case STORAGE_UNAVAILABLE, CACHE_UNAVAILABLE -> HttpStatus.SERVICE_UNAVAILABLE;
             case ROUTING_TIMEOUT -> HttpStatus.GATEWAY_TIMEOUT;
             case ROUTE_NOT_FOUND -> HttpStatus.NOT_FOUND;
         };

@@ -1,6 +1,16 @@
 name: junction-trails
 
 services:
+  valkey:
+    image: valkey/valkey:8.1-alpine
+    ports:
+      - "127.0.0.1:${VALKEY_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
   db:
     build: ./postgres
     environment:
