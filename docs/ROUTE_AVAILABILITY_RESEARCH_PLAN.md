@@ -1,8 +1,13 @@
 # Researching route availability after a routing failure
 
-**Status: team proposal, not implemented or an accepted API extension.** Murat requested
-this plan for all three developers. Agree the decisions below after baseline E5 and
-before implementation. [CLAUDE.md](../CLAUDE.md) remains the contract authority.
+**Status: Murat selected an optional extension to `POST /api/chat`; public research is
+not connected.** He authorized only his Java/backend integration work in this slice.
+Mukhamed's parallel [PR #56](https://github.com/uksus148/trego./pull/56) prepares an
+internal core, without HTTP activation; review its interface together with this proposal.
+The [wire proposal and ownership boundary](ROUTE_AVAILABILITY_CONTRACT.md) and
+[consumer fixtures](contracts/route-availability.examples.json) need affected-owner
+review before agent/frontend activation. Baseline E5 remains a separate delivery gate.
+[CLAUDE.md](../CLAUDE.md) remains the contract authority.
 The accompanying [issue #49 fix](ROUTING_DIAGNOSTICS.md) only distinguishes routing errors;
 it adds no post-failure web search, date-aware routing or automatic fallback.
 
@@ -26,10 +31,11 @@ Research cannot turn an unsuccessful route into a saved routeId or certify hikin
 
 ## Proposed workflow
 
-1. Preserve the verified API outcome and the exact resolved places/coordinates.
-2. Establish the user's planning date or interval, with enough year/season precision
+1. For opted-in requests, establish the user's planning date or interval before
+   ingestion/routing, with enough year/season precision
    to apply the source. Ask when missing or ambiguous; do not assume the event date.
    Reconfirm dates on changed plans instead of silently reusing old session context.
+2. Preserve the verified API outcome and the exact resolved places/coordinates.
 3. Investigate only if the confirmed failure is relevant and the user wants details.
    Do not reinterpret auth/quota/storage/cache outages as a trail-availability problem.
 4. Search for the relevant named section, jurisdiction and dates. Prefer park/trail
@@ -47,28 +53,31 @@ Research cannot turn an unsuccessful route into a saved routeId or certify hikin
 
 | Owner | Work and handoff |
 |---|---|
-| Murat | Preserve API classifications and routing limits; review any API/date/evidence contract; verify no retry or route write on failure; agree storage only if required |
+| Murat | Preserve API classifications and routing limits; enforce the Java input boundary; prepare API/date/evidence contract examples; verify no retry or route write on failure; agree storage only if required |
 | Mukhamed | Extract/clarify planning dates; add bounded optional Exa research and evidence validation; separate facts from hypotheses in replies; test provider/deadline failures |
-| Daniil | Present router result and sourced external restrictions separately; show applicable dates and uncertainty; provide explicit investigate/change-point actions and safe source links |
+| Daniil | Present router result and sourced external restrictions separately; show applicable dates and uncertainty; provide research opt-in before chat submission, change-point actions and safe source links |
 
-First agree scope and wire examples together. Then implement agent fixtures/research,
+Review the selected transport and proposed wire examples together. Then implement agent fixtures/research,
 the agreed UI/contract slice, and a same-revision integration check. Request affected
 owners and at least one independent approval for every PR. This plan does not authorize
 adding new runtime features to the current routing fix or block its review.
 
-## Decisions required before coding
+## Selected transport and remaining agreement
 
-Murat retains architectural decisions; proposals here are not his selected design.
+Murat selected the existing `/api/chat` transport with optional research consent,
+planning dates and structured evidence. This is a specific extension, not approval
+for unrelated deferred chat/planner features. Exact validation/state rules remain
+the concrete proposal in the linked contract, subject to affected-owner review.
 
 | Decision | Options and tradeoffs |
 |---|---|
-| Evidence delivery | Reuse `reply` with verified source links: fewer wire changes, but conflicts with the current reply writer's no-URL rule and needs safe UI rendering. Add optional structured evidence: clearer source/date presentation and testability, but requires an agreed shared contract and consumer changes. Do not invent a field or overload Place/source |
-| Planning dates | Clarify through existing chat text: preserves the current request shape but needs validated internal dates/session semantics. Add an explicit UI date: clearer input, with additional contract and UI work |
-| Trigger | Explicit "investigate" action limits latency/cost and preserves the baseline flow. Automatic research adds waiting and provider work to every qualifying failure; keep it disabled unless agreed |
-| Persistence/cache | Request-scoped findings avoid schema work and stale saved notices. Caching/history can reduce repeat work but needs source-specific freshness, invalidation and retention decisions; do not assume the routing cache's 24-hour policy fits closures |
+| Evidence delivery | Selected: optional structured evidence in the current chat response. This needs consumer agreement but keeps sources/dates distinct from prose and Place/source. A separate endpoint is deferred |
+| Planning dates | Selected direction: optional explicit date/interval in chat. The wire proposal uses inclusive `planningWindow.from/to`; agent extraction, missing/conflicting dates and UI controls belong to their owners |
+| Trigger | Selected direction: explicit request opt-in. The proposed first slice investigates a verified failure in that same chat request; no automatic research on baseline requests or replay of an earlier route POST |
+| Persistence/cache | First-slice proposal: request-scoped findings with no new database schema. Separate failure-context storage and research caching/history remain deferred; do not assume the routing cache's 24-hour policy fits closures |
 
-Suggested first slice: explicit opt-in, request-scoped evidence, existing Exa integration,
-and date clarification. Propose at most one search within a small agreed budget and the
+First slice: explicit opt-in, request-scoped evidence, existing Exa integration,
+and date clarification before side effects when dates are missing. Propose at most one search within a small agreed budget and the
 remaining total chat deadline. No paid retries; if optional research fails or times out,
 retain the known routing result and say the external explanation is unconfirmed.
 Do not refresh session success before its existing storage step completes.

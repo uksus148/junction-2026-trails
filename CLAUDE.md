@@ -83,16 +83,25 @@ Keep the region configurable, with deeper testing for the Tatras.
 Issue #49 live verification found that the original Rysy endpoint cannot be matched by
 the current ORS foot-hiking graph within its default 350 m radius. Retain it as a regression;
 never widen the radius or silently substitute a destination. Murat requested a demo
-correction. The revised E5 candidate for affected-owner review is **July summer planning**:
+correction. After routing review in #54, frontend #55 adopts **July summer planning**:
 "Plan a summer hike in July from Štrbské Pleso to Popradské pleso via the Skok waterfall.
-I love wild scenery." It routed with the same provider/options. The MVP has no date-aware
+I love wild scenery." The diagnostic route used the same provider/options; merged demo
+text does not establish a new full E5 pass. The MVP has no date-aware
 routing engine; seasonal evidence and [routing diagnostics](docs/ROUTING_DIAGNOSTICS.md)
 are separate from the provider failure code.
 
-The [route-availability research plan](docs/ROUTE_AVAILABILITY_RESEARCH_PLAN.md) is a
-team proposal for a later opt-in investigation of official restrictions and planning
-dates. It does not enable new runtime research or accept new chat fields. Independently
-verified restrictions may be reported with sources; they are not proof of why ORS failed.
+For the [route-availability research plan](docs/ROUTE_AVAILABILITY_RESEARCH_PLAN.md),
+Murat selected optional consent/planning dates and structured evidence on the existing
+`POST /api/chat`, rather than a separate endpoint. He requested only his Java/backend
+integration work. The [wire proposal](docs/ROUTE_AVAILABILITY_CONTRACT.md) and
+[examples](docs/contracts/route-availability.examples.json) need affected-owner review;
+the current agent still rejects the proposed new request fields. No research runtime
+or date-aware routing is enabled. Independently verified restrictions may be reported
+with sources; they are not proof of why ORS failed. This specific direction does not
+approve unrelated deferred chat/planner features.
+Mukhamed's parallel [PR #56](https://github.com/uksus148/trego./pull/56) proposes the
+internal research core without HTTP activation. Its date/evidence mapping still needs
+review against the public proposal; this Java work does not include the agent code.
 
 ### API contract
 
@@ -167,6 +176,10 @@ submitted `source`, return 400 rather than being silently ignored. See the
   and photos are allowed. Preferences remain descriptive interests, without an
   implied routing/ranking effect. Route POST is not idempotent; no automatic POST
   retries, including lost responses. Earlier places/routes may survive failures.
+  The current Java boundary change rejects unknown request fields with 400
+  `invalid_request` instead of ignoring them: only the four documented root fields
+  and endpoint `lat`/`lon` are accepted. This tightening needs affected-owner review.
+  Dates and research metadata belong to the proposed chat extension, never route input.
 
   ```json
   {"start":{"lat":49.119,"lon":20.063},"end":{"lat":49.179,"lon":20.088},"placeIds":["00000000-0000-4000-8000-000000000002"],"preferences":["wild scenery"]}
@@ -177,9 +190,9 @@ submitted `source`, return 400 rather than being silently ignored. See the
   place-search errors remain compatible. Codes/statuses are `invalid_request`
   (400), `unknown_place` and `no_hiking_route` (422), `routing_provider_error`
   (502), `storage_unavailable` and `cache_unavailable` (503), `routing_timeout`
-  (504), and `route_not_found` (404). This issue #49 branch adds 422
+  (504), and `route_not_found` (404). Merged #54 adds 422
   `waypoint_not_routable` for ORS 2010, distinct from 2009 `no_hiking_route`,
-  with affected-owner review pending. Verified routing failures produce distinct
+  as reviewed by both affected owners. Verified routing failures produce distinct
   normal clarifications: different waypoints for no path, or check coordinates/
   choose another point for a failed network match. Neither proves a closure,
   seasonal restriction or difficulty exclusion. Dependency failures remain
