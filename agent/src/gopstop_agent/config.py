@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from pydantic import AliasChoices, Field, RedisDsn
+from pydantic import AliasChoices, Field, RedisDsn, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -24,3 +24,6 @@ class Settings(BaseSettings):
     valkey_connect_timeout_seconds: float = Field(default=2, gt=0, le=30)
     valkey_socket_timeout_seconds: float = Field(default=2, gt=0, le=30)
     cors_origins: list[str] = ["http://localhost:5173"]
+    anthropic_api_key: SecretStr = Field(default="", validation_alias="ANTHROPIC_API_KEY")
+    anthropic_model: str = "claude-haiku-5-5"
+    provider_timeout_seconds: float = Field(default=20, gt=0, le=60)

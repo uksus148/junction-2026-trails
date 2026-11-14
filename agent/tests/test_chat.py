@@ -99,6 +99,18 @@ async def test_session_store_refreshes_expiry_and_caps_history(fake_redis):
     assert 0 < await fake_redis.ttl("gopstop:chat-session:bounded") <= 600
 
 
+async def test_history_is_bounded_and_isolated_by_session(fake_redis):
+    store = ValkeySessionStore(fake_redis, ttl_seconds=600, max_messages=200)
+    for index in range(8):
+        await store.record_exchange("first", str(index), "reply")
+    await store.record_exchange("second", "private request", "private reply")
+    history = await store.history("first")
+    assert len(history) == 12
+    assert history[0] == {"role": "user", "content": "2"}
+    assert all("private" not in item["content"] for item in history)
+    assert await store.history("unknown") == []
+
+
 def test_browser_preflight_and_post_have_cors_headers(client):
     origin = "http://localhost:5173"
     preflight = client.options("/api/chat", headers={
