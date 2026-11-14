@@ -1,8 +1,10 @@
-"""FastAPI application and baseline chat endpoint."""
+"""FastAPI chat with opt-in orchestration and bounded managed resources."""
 
+import asyncio
 from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
+from contextlib import AsyncExitStack, asynccontextmanager
 
+import httpx
 from fastapi import Depends, FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -12,7 +14,11 @@ from redis.backoff import NoBackoff
 from redis.exceptions import RedisError
 
 from gopstop_agent.config import Settings
+from gopstop_agent.chat import ChatResponse, ChatService, create_chat
+from gopstop_agent.diagnostics import stage, trace
+from gopstop_agent.intent import ProviderError, ProviderTimeout
 from gopstop_agent.sessions import SessionStore, ValkeySessionStore
+from gopstop_agent.trails_api import HandoffError
 
 
 class ChatRequest(BaseModel):
@@ -29,21 +35,23 @@ class ChatRequest(BaseModel):
         return value
 
 
-class ChatResponse(BaseModel):
-    reply: str
-    places: list[dict[str, object]]
-    routeId: str | None = None
-
-
 def create_app(
     settings: Settings | None = None,
     redis_client: Redis | None = None,
+    http_client: httpx.AsyncClient | None = None,
+    chat_service: ChatService | None = None,
 ) -> FastAPI:
     configured = settings or Settings()
     owns_client = redis_client is None
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+        if configured.chat_enabled and chat_service is None and (
+            not configured.anthropic_api_key.get_secret_value().strip()
+            or not configured.exa_api_key.get_secret_value().strip()
+            or not configured.anthropic_model.strip()
+        ):
+            raise ValueError("Enabled chat requires Claude/Exa keys and a model ID.")
         client = (
             redis_client
             if redis_client is not None
@@ -55,16 +63,23 @@ def create_app(
                 retry=Retry(NoBackoff(), 0),
             )
         )
-        app.state.session_store = ValkeySessionStore(
-            client,
-            ttl_seconds=configured.session_ttl_seconds,
-            max_messages=configured.session_max_messages,
-        )
-        try:
-            yield
-        finally:
+        async with AsyncExitStack() as resources:
             if owns_client:
-                await client.aclose()
+                resources.push_async_callback(client.aclose)
+            app.state.session_store = ValkeySessionStore(
+                client, ttl_seconds=configured.session_ttl_seconds,
+                max_messages=configured.session_max_messages,
+            )
+            app.state.chat_service = None
+            if configured.chat_enabled:
+                if chat_service is not None:
+                    app.state.chat_service = chat_service
+                else:
+                    http = http_client or await resources.enter_async_context(httpx.AsyncClient(
+                        timeout=configured.provider_timeout_seconds, follow_redirects=False,
+                    ))
+                    app.state.chat_service = create_chat(http, client, configured)
+            yield
 
     app = FastAPI(title="trego. Agent", version="0.1.0", lifespan=lifespan)
     app.add_middleware(
@@ -80,18 +95,33 @@ def create_app(
     @app.post("/api/chat", response_model=ChatResponse, response_model_exclude_none=True)
     async def chat(
         payload: ChatRequest,
+        request: Request,
         session_store: SessionStore = Depends(get_session_store),
     ) -> ChatResponse:
-        # Keep the MVP honest until intent extraction and place search are integrated.
-        reply = "Thanks, I’ve saved your request. Place discovery and route planning are not configured yet."
         try:
-            await session_store.record_exchange(payload.sessionId, payload.message, reply)
+            with trace(payload.sessionId), stage("chat"):
+                async with asyncio.timeout(configured.chat_timeout_seconds):
+                    service = request.app.state.chat_service
+                    if service is None:
+                        result = ChatResponse(reply="Thanks, I’ve saved your request. Place discovery and route planning are not configured yet.", places=[])
+                    else:
+                        with stage("history"):
+                            history = await session_store.history(payload.sessionId)
+                        result = await service.respond(payload.message, history)
+                    with stage("session_save"):
+                        await session_store.record_exchange(payload.sessionId, payload.message, result.reply)
+                    return result
+        except (ProviderTimeout, TimeoutError) as exc:
+            raise HTTPException(504, "Chat exceeded its time limit.") from exc
+        except HandoffError as exc:
+            raise HTTPException(exc.status_code, str(exc)) from exc
+        except ProviderError as exc:
+            raise HTTPException(502, "Place research or reply generation is temporarily unavailable.") from exc
         except RedisError as exc:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Chat session storage is temporarily unavailable.",
             ) from exc
-        return ChatResponse(reply=reply, places=[])
 
     return app
 
