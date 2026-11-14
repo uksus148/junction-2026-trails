@@ -3,6 +3,8 @@ package io.junction.trails.places.web;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.junction.trails.places.application.PlaceService;
 import java.nio.file.Path;
+import java.util.Map;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -13,6 +15,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -37,7 +41,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         properties = "spring.config.import=")
-class PlaceSearchTest {
+class PlaceApiTest {
     @Container
     static final PostgreSQLContainer<?> DATABASE = new PostgreSQLContainer<>(
             DockerImageName.parse(new ImageFromDockerfile()
@@ -154,6 +158,69 @@ class PlaceSearchTest {
         var response = http.getForEntity("/api/places?bbox=20,49,21,50&tags=castle,,waterfall", JsonNode.class);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(response.getBody().get("detail").asText()).contains("tags");
+    }
+
+    @Test
+    void createsAPlaceAndFindsItThroughSpatialSearch() {
+        var response = http.postForEntity("/api/places", Map.of(
+                "name", "  Skok waterfall  ", "lat", 49.1536, "lon", 20.0417,
+                "tags", new String[]{" waterfall ", "nature", "waterfall"},
+                "source", "untrusted"), JsonNode.class);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        JsonNode created = response.getBody();
+        assertThat(created.size()).isEqualTo(7);
+        UUID id = UUID.fromString(created.get("id").asText());
+        assertThat(created.get("name").asText()).isEqualTo("Skok waterfall");
+        assertThat(created.get("lat").asDouble()).isEqualTo(49.1536);
+        assertThat(created.get("lon").asDouble()).isEqualTo(20.0417);
+        assertThat(created.get("tags").toString()).isEqualTo("[\"waterfall\",\"nature\"]");
+        assertThat(created.get("photos").toString()).isEqualTo("[]");
+        assertThat(created.get("source").asText()).isEqualTo("manual");
+        assertThat(jdbc.sql("SELECT ST_SRID(geom) FROM places WHERE id = :id")
+                .param("id", id).query(Integer.class).single()).isEqualTo(4326);
+
+        var found = http.getForEntity("/api/places?bbox=20.03,49.15,20.05,49.16&tags=waterfall", JsonNode.class);
+        assertThat(found.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(found.getBody().size()).isEqualTo(1);
+        assertThat(found.getBody().get(0)).isEqualTo(created);
+    }
+
+    @Test
+    void acceptsEmptyTagsAndCoordinateLimits() {
+        var response = http.postForEntity("/api/places", Map.of(
+                "name", "Boundary", "lat", -90, "lon", 180, "tags", new String[]{}), JsonNode.class);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        var found = http.getForEntity("/api/places?bbox=179,-90,180,-89", JsonNode.class);
+        assertThat(found.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(found.getBody().get(0)).isEqualTo(response.getBody());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "{}", "null", "{", "{\"name\":\"\",\"lat\":49,\"lon\":20,\"tags\":[]}",
+            "{\"name\":\"  \",\"lat\":49,\"lon\":20,\"tags\":[]}",
+            "{\"lat\":49,\"lon\":20,\"tags\":[]}",
+            "{\"name\":\"Place\",\"lon\":20,\"tags\":[]}",
+            "{\"name\":\"Place\",\"lat\":49,\"tags\":[]}",
+            "{\"name\":\"Place\",\"lat\":null,\"lon\":20,\"tags\":[]}",
+            "{\"name\":\"Place\",\"lat\":91,\"lon\":20,\"tags\":[]}",
+            "{\"name\":\"Place\",\"lat\":49,\"lon\":-181,\"tags\":[]}",
+            "{\"name\":\"Place\",\"lat\":1e999,\"lon\":20,\"tags\":[]}",
+            "{\"name\":\"Place\",\"lat\":\"bad\",\"lon\":20,\"tags\":[]}",
+            "{\"name\":\"Place\",\"lat\":49,\"lon\":20}",
+            "{\"name\":\"Place\",\"lat\":49,\"lon\":20,\"tags\":null}",
+            "{\"name\":\"Place\",\"lat\":49,\"lon\":20,\"tags\":[\"\"]}",
+            "{\"name\":\"Place\",\"lat\":49,\"lon\":20,\"tags\":[null]}",
+            "{\"name\":\"Place\",\"lat\":49,\"lon\":20,\"tags\":[\"nature\",\"  \"]}"
+    })
+    void rejectsInvalidCreationWithoutWritingToTheDatabase(String json) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        var response = http.postForEntity("/api/places", new HttpEntity<>(json, headers), JsonNode.class);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.getHeaders().getContentType()).isEqualTo(MediaType.APPLICATION_PROBLEM_JSON);
+        assertThat(response.getBody().get("detail").asText()).isNotBlank();
+        assertThat(jdbc.sql("SELECT count(*) FROM places").query(Integer.class).single()).isEqualTo(5);
     }
 
     @Test

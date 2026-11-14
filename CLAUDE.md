@@ -78,7 +78,19 @@ Agree changes with the affected developers and record them here.
 
 - `POST /api/chat` `{sessionId, message}` → `{reply, places:[Place], routeId?}` (agent)
 - `GET /api/places?bbox=minLon,minLat,maxLon,maxLat&tags=castle,waterfall` → `[Place]` (api)
-- `POST /api/places` `{name, lat, lon, tags[]}` for manual place creation (api)
+- `POST /api/places` `{name, lat, lon, tags[]}` creates a manual place and returns
+  HTTP **201 Created** with the complete `Place`, a server-generated UUID,
+  server-owned `source: "manual"`, and `photos: []` until photo storage is implemented (api).
+  All four fields are required. Coordinates must be finite WGS84 values (`lat` in [-90, 90],
+  `lon` in [-180, 180]). Empty tags are allowed; names and supplied tag entries must be
+  non-null and nonblank. Strip surrounding whitespace from names/tags and remove duplicate
+  tags in first-occurrence order, preserving case. Invalid or malformed input returns
+  HTTP **400** Problem Details with an English `detail` and no inserted row. A client-supplied
+  source cannot override the manual source. The creation transaction commits before returning
+  success, and a matching subsequent bbox/tag search returns the saved place. Separate creation
+  requests create separate records; manual creation has no deduplication guarantee. These
+  manual-write details were confirmed by the frontend and agent owners in PR #33. Researched
+  provenance, OSM deduplication, and route handoff require separate agreement.
 - `POST /api/routes` `{start:{lat,lon}, end:{lat,lon}, placeIds[], preferences[]}` → `Route` (api)
 - `GET /api/routes/{id}` → `Route`
 - `POST /api/photos` multipart `{file, lat, lon}` publishes Kafka event `photo.uploaded`

@@ -17,6 +17,7 @@ api/
 │   └── places/
 │       ├── web/
 │       │   ├── PlaceController.java
+│       │   ├── CreatePlaceRequest.java
 │       │   └── PlaceExceptionHandler.java
 │       ├── application/
 │       │   └── PlaceService.java
@@ -37,7 +38,7 @@ api/
     │   ├── BoundingBoxTest.java
     │   └── NewPlaceTest.java
     └── web/
-        ├── PlaceSearchTest.java
+        ├── PlaceApiTest.java
         └── PlaceCorsConfigurationTest.java
 ```
 
@@ -45,7 +46,7 @@ api/
 |---|---|
 | `config` | Shared Spring MVC settings and immutable configuration properties, including allowed browser origins |
 | `places/web` | HTTP parameters, response handling, and HTTP errors |
-| `places/application` | Search workflows, transaction boundaries, and entity-to-response mapping |
+| `places/application` | Search and creation workflows, transaction boundaries, and entity-to-response mapping |
 | `places/model` | Validated input values and response snapshots, independent of Spring and persistence |
 | `places/persistence` | JPA entities, Spring Data repositories, and parameterized native spatial queries |
 | `resources/db/migration` | Ordered Flyway migrations for the application's database schema |
@@ -93,6 +94,20 @@ curl 'http://localhost:8080/api/places?bbox=20,49,21,50&tags=waterfall'
 - Results are ordered by ID. Place IDs are UUID strings. The response follows the `Place` contract, with `photos: []` until photo storage is implemented.
 - Invalid parameters produce HTTP 400 with an English Problem Detail `detail` field.
 
+## Create a place
+
+```sh
+curl -i 'http://localhost:8080/api/places' \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"Skok waterfall","lat":49.1536,"lon":20.0417,"tags":["waterfall","nature"]}'
+```
+
+The implementation returns HTTP **201 Created** and a `Place` with a generated UUID, the supplied coordinates, `photos: []`, and server-assigned `source: "manual"`. This completes the frontend's existing `addPlace` operation. The frontend and agent owners confirmed these manual-write semantics in [PR #33](https://github.com/uksus148/junction-2026-trails/pull/33); they are recorded in the canonical [API contract](../CLAUDE.md#api-contract). Researched provenance, OSM deduplication, and route handoff remain subject to separate agreement.
+
+Name, latitude, longitude, and tags are required. Name must contain non-whitespace characters; coordinates must be finite and within WGS84 ranges. Tags may be empty; each supplied entry must be non-null and non-blank. Names and tags are stripped of surrounding whitespace, and repeated tags are removed while preserving order and case. An input `source` field cannot override the server-assigned value. Invalid or malformed input returns HTTP 400 and does not insert a row. Recognized input errors have a dedicated exception mapping; unexpected failures remain server errors.
+
+The creation transaction finishes before the response is returned. A subsequent matching bbox/tag search returns the created place. Creation does not perform name-based deduplication; separate requests create separate records. The read and write paths use the original Flyway schema, with no migration rewrite.
+
 ## Verify
 
 ```sh
@@ -100,16 +115,17 @@ cd api
 mvn verify
 ```
 
-Tests build the existing `infra/postgres` image and start an isolated PostgreSQL 18 container. Flyway applies the migration and Hibernate validates the entity mapping. HTTP tests verify search, invalid parameters, coordinate order, tag-array mapping, and unexpected server errors. Model tests exercise constructor invariants and collection snapshots. Browser-access tests cover GET/POST preflight, successful and invalid search responses, denied origins/methods, and configurable frontend origins. Docker must be running. JDBC is used in integration tests to seed and independently inspect the database.
+Tests build the existing `infra/postgres` image and start an isolated PostgreSQL 18 container. Flyway applies the migration and Hibernate validates the entity mapping. HTTP tests verify search, creation followed by search, invalid-input rejection without writes, coordinate order and limits, tag-array mapping, and unexpected server errors. Model tests exercise constructor invariants and collection snapshots. Browser-access tests cover GET/POST preflight, successful and invalid search responses, denied origins/methods, and configurable frontend origins. Docker must be running. JDBC is used in integration tests to seed and independently inspect the database.
 
 The API workflow runs these checks for API, database image, or workflow changes. The workflow can be exercised on GitHub after this local work has been reviewed and published.
 
 ## Review order
 
-1. [PlaceController](src/main/java/io/junction/trails/places/web/PlaceController.java) maps GET parameters to the search workflow.
-2. [BoundingBox](src/main/java/io/junction/trails/places/model/BoundingBox.java) and [NewPlace](src/main/java/io/junction/trails/places/model/NewPlace.java) enforce value invariants; [Place](src/main/java/io/junction/trails/places/model/Place.java) defines the response snapshot.
-3. [PlaceService](src/main/java/io/junction/trails/places/application/PlaceService.java) owns the read transaction and entity-to-response mapping.
-4. [PlaceEntity](src/main/java/io/junction/trails/places/persistence/PlaceEntity.java) maps the existing schema; [PlaceRepository](src/main/java/io/junction/trails/places/persistence/PlaceRepository.java) executes native spatial queries through JPA.
-5. [PlaceExceptionHandler](src/main/java/io/junction/trails/places/web/PlaceExceptionHandler.java) maps known input failures to HTTP 400. [PlaceSearchTest](src/test/java/io/junction/trails/places/web/PlaceSearchTest.java) verifies the HTTP-to-PostGIS path.
+1. [PlaceController](src/main/java/io/junction/trails/places/web/PlaceController.java) handles GET and POST; [CreatePlaceRequest](src/main/java/io/junction/trails/places/web/CreatePlaceRequest.java) converts nullable JSON input into a validated command.
+2. [NewPlace](src/main/java/io/junction/trails/places/model/NewPlace.java) and [BoundingBox](src/main/java/io/junction/trails/places/model/BoundingBox.java) enforce input invariants at construction. [Place](src/main/java/io/junction/trails/places/model/Place.java) defines the response snapshot.
+3. [PlaceService](src/main/java/io/junction/trails/places/application/PlaceService.java) owns transactions, source assignment, and response mapping.
+4. [PlaceEntity](src/main/java/io/junction/trails/places/persistence/PlaceEntity.java) maps the existing schema; [PlaceRepository](src/main/java/io/junction/trails/places/persistence/PlaceRepository.java) supplies JPA persistence and native spatial queries.
+5. [PlaceExceptionHandler](src/main/java/io/junction/trails/places/web/PlaceExceptionHandler.java) maps known place-input failures to HTTP 400.
+6. [V1 migration](src/main/resources/db/migration/V1__create_places.sql) remains the schema owner. [PlaceApiTest](src/test/java/io/junction/trails/places/web/PlaceApiTest.java) verifies the complete HTTP-to-PostGIS path.
 
 Maven generates compiled classes, reports, and the application JAR under `target/`. Source changes belong under `src/`.
