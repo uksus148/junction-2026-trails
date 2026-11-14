@@ -100,18 +100,44 @@ Agree changes with the affected developers and record them here.
 - `Photo = {url, thumbUrl, author, license, sourceUrl, lat, lon}`
 - `Route = {id, geojson(LineString), distanceKm, ascentM, durationMin, places:[Place], segments:[{fromKm,toKm,photos:[Photo]}]}`
 
-### Proposed sourced place and route handoff — not agreed yet
+### Sourced place and route handoff agreement
 
-[docs/AGENT_API_HANDOFF.md](docs/AGENT_API_HANDOFF.md) proposes optional research
+[docs/AGENT_API_HANDOFF.md](docs/AGENT_API_HANDOFF.md) records optional research
 provenance for place creation, atomic OSM deduplication into persisted UUIDs,
 ordered route handoff, error codes, and chat completion. Daniil explicitly
 accepted D1/D3/D4/D5 in [his PR #34 response](https://github.com/uksus148/junction-2026-trails/pull/34#pullrequestreview-5901154716)
-and owns the recorded frontend integration tasks. Murat's personal API/storage
-decision is still pending; the technical COMMENT from his account does not
-approve the architecture. Required owner agreement remains a gate to implementation.
-The proposal does not change the published API contract above. Move accepted
-decisions here after review; PR #31's internal discovery approval is not write
-contract agreement.
+and owns the recorded frontend integration tasks. Murat subsequently
+[accepted D1–D4 as the API/storage owner](https://github.com/uksus148/trego/pull/34#pullrequestreview-5904059886),
+superseding the earlier pending-decision status. The researched-write extension
+and agent orchestration are not implemented in this route increment. Publish
+their detailed accepted contract here with their implementation PRs. The route
+semantics and separately proposed cache rollout are recorded below; agreement
+does not establish completed runtime integration.
+
+### Route implementation selected by Murat
+
+Murat selected a provider-neutral `RoutingGateway` with a separate ORS adapter and accepted
+the route-side D3/D4 semantics from PR #34. This implementation preserves ordered intermediate
+UUIDs and repeated visits, resolves every UUID before provider work, uses ORS `foot-hiking`,
+and commits a saved route before returning HTTP 201 with the full baseline `Route`.
+An empty `placeIds` builds a direct hike. This increment supports at most five intermediate
+visits, rejecting larger requests before provider work. All four baseline request fields
+are required. Preferences are retained verbatim as descriptive interests; they do not change
+the track. Route.places contains only intermediate visits, in order, with repeated visits
+preserved. Empty segments/photos are valid until the photo workflow exists.
+
+GET of a saved route returns 200 without contacting ORS; an unknown route UUID returns 404.
+Route errors use Problem Details with English detail and stable codes: 400 `invalid_request`,
+404 `route_not_found`, 422 `unknown_place` / `no_hiking_route`, 502 `routing_provider_error`,
+503 `storage_unavailable`, and 504 `routing_timeout`. Provider failures do not become
+synthetic routes or ordinary no-route results. POST has no automatic retries or idempotency
+guarantee; separate requests can create separate saved route IDs.
+
+Murat explicitly staged the required Valkey routing cache in the next focused PR. The first
+slice makes one bounded, uncached provider request per valid POST. The cache-staging amendment
+is recorded in PR #34 for affected-owner confirmation before integration; it does not silently
+remove the team's 24-hour cache requirement. `cache_unavailable` applies when the required
+cache is introduced. See [the route implementation and review guide](api/ROUTES.md).
 
 ### Proposed extension: personalization and day plan — not agreed yet
 

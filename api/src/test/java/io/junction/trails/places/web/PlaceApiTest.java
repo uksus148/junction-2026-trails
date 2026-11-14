@@ -70,7 +70,7 @@ class PlaceApiTest {
 
     @BeforeEach
     void seedPlaces() {
-        jdbc.sql("TRUNCATE places").update();
+        jdbc.sql("TRUNCATE route_places, routes, places").update();
         jdbc.sql("""
                 INSERT INTO places (id, name, geom, tags, source) VALUES
                 ('00000000-0000-0000-0000-000000000001', 'Inside waterfall',
