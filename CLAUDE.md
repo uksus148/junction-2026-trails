@@ -111,9 +111,11 @@ Application tables are managed by Flyway migrations in `api`. Keep credentials i
 
 ### Java API organization
 
-The Spring Boot API is a single Maven module. Group Java packages by feature under `io.junction.trails`. The current `places` feature separates HTTP handlers in `web`, framework-independent data and value objects in `model`, and SQL access in `persistence`. Future `routes` and `photos` features follow the same feature-based organization, with business workflows introduced as they are implemented. Tests mirror production package paths. Flyway migrations remain in `api/src/main/resources/db/migration` for the shared application schema. See the [API code map and review order](api/README.md#code-map).
+The Spring Boot API is a single Maven module. Group Java packages by feature under `io.junction.trails`. The current `places` feature separates HTTP handlers and error mapping in `web`, transaction boundaries and workflows in `application`, framework-independent values and response data in `model`, and JPA entities and repositories in `persistence`. Keep entities out of HTTP responses. Use Spring Data JPA and Hibernate Spatial for ordinary persistence; native queries preserve PostGIS-specific search behavior. JDBC remains available for complex queries when it offers a concrete benefit. Future `routes` and `photos` features follow the same feature-based organization. Tests mirror production package paths. Flyway owns the schema; Hibernate validates it and Open EntityManager in View is disabled. See the [API code map and review order](api/README.md#code-map).
 
 Shared Spring MVC configuration applies CORS to `/api/**` for GET and POST with Content-Type. `API_CORS_ALLOWED_ORIGINS` configures a comma-separated list of exact frontend origins; the default is `http://localhost:5173`. See the API README for local and deployed frontend configuration.
+
+Use Lombok `@RequiredArgsConstructor` for constructor-based dependency injection with final fields, without `@Autowired` on the single generated constructor. Bind configuration values to immutable properties objects when injecting them into components. Use Lombok for ordinary getters, setters where mutation is appropriate, and boilerplate constructors in non-Spring classes too. Keep invariant checks, defensive copies, derived accessors, and other behavioral constructor/accessor logic explicit. JPA entities may use a protected Lombok `@NoArgsConstructor`.
 
 ### Frontend
 
@@ -196,6 +198,8 @@ Role-specific skills listed in the original team plan follow.
 - November 14 — Every PR requires review and approval by at least one developer other than the author, including internal changes that affect no other component. Request review from owners of the components affected by a PR. GitHub requires one independent approval. Additional reviewers are selected when their components or shared contracts are affected. Murat's assistant reviews backend, shared infrastructure, repository governance, and backend-facing integration. In a stack, retarget the next PR to main before merging it (#14 and #15 landed in stack branches and were re-landed in #21).
 - November 14 — The hiking-intent adapter uses Claude tool use with a validated `{start, end, mustSee[], preferences[]}` result and at most six recent session exchanges. Blank values are normalized; results exceeding five intermediate stops or twelve preferences require user clarification. Provider requests have explicit timeouts and no automatic paid retries. The HTTP chat contract stays on the baseline; connecting intent and place discovery is a later block.
 - November 14 — The internal Exa text-research adapter retains source URLs and caches responses in Valkey for 24 hours. [The agent delivery plan](docs/AGENT_PLAN.md) records sequential blocks and unresolved integration gates; shared API/schema/event proposals remain unapproved until the affected owners agree.
+
+- November 14 — Murat selected Spring Data JPA for ordinary API persistence, with Hibernate Spatial for PostGIS mapping. Native JPA queries preserve the current spatial filters; JDBC remains an option for complex queries. Flyway continues to own schema changes, and application services own transaction boundaries. The implementation and shared documentation changes require the normal PR review.
 
 ## Open questions and completed checks
 
