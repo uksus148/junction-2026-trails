@@ -11,6 +11,7 @@ from gopstop_agent.diagnostics import stage
 from gopstop_agent.exa import ExaSearch, ResearchSource
 from gopstop_agent.geocoding import GeocodedPlace, NominatimGeocoder, OSM_ATTRIBUTION
 from gopstop_agent.intent import ClaudeIntentExtractor, Message, ProviderTimeout, RouteIntent
+from gopstop_agent.resolution_cache import CachedPlaceResolver
 from gopstop_agent.resolver import ClaudePlaceResolver
 
 
@@ -51,7 +52,7 @@ class DiscoveryResult(BaseModel):
 
 class PlaceDiscovery:
     def __init__(self, intent: ClaudeIntentExtractor, search: ExaSearch,
-                 resolver: ClaudePlaceResolver, geocoder: NominatimGeocoder,
+                 resolver: ClaudePlaceResolver | CachedPlaceResolver, geocoder: NominatimGeocoder,
                  timeout_seconds: float = 60) -> None:
         self._intent, self._search, self._resolver, self._geocoder = intent, search, resolver, geocoder
         self._timeout_seconds = timeout_seconds
@@ -114,7 +115,7 @@ def create_discovery(client: httpx.AsyncClient, cache: Redis, settings: Settings
     return PlaceDiscovery(
         ClaudeIntentExtractor(client, claude_key, settings.anthropic_model, timeout),
         ExaSearch(client, cache, exa_key, timeout),
-        ClaudePlaceResolver(client, claude_key, settings.anthropic_model, timeout),
+        CachedPlaceResolver(ClaudePlaceResolver(client, claude_key, settings.anthropic_model, timeout), cache),
         NominatimGeocoder(client, cache, settings.nominatim_user_agent,
                           str(settings.nominatim_base_url), timeout),
         settings.discovery_timeout_seconds,
