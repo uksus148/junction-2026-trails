@@ -12,6 +12,9 @@ approve new endpoints, fields, tables, or Kafka event schemas.
   clarification for excessive stops/preferences. Live Claude remains unverified.
 - HTTP chat still uses `{sessionId, message}` -> `{reply, places, routeId?}`.
 - Spring Boot owns persisted places, routes, uploads, SQL, and Flyway migrations.
+- [PR #27](https://github.com/uksus148/junction-2026-trails/pull/27) proposes
+  GET /api/places, a Flyway places table, UUID IDs, and HTTP 400 Problem Details.
+  It is pending owner review; place creation and route handoff remain separate.
 - Mukhamed implements the agent; Murat owns the API/storage boundary; Daniil owns
   the frontend/chat boundary. Request both teammates for each agent PR.
 
