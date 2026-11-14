@@ -26,6 +26,8 @@ The infrastructure workflow from PR #1 runs for changes under `infra/**`. The au
 
 ## Assigning reviews
 
+Every PR requires review and at least one approval from a developer other than its author, including internal changes that affect no other component. When no affected owner other than the author exists, explicitly request another developer with the closest relevant expertise.
+
 Choose reviewers according to the components and integration boundaries affected by the PR. Name those components and the requested review scope in the PR description.
 
 | Area | Owner |
