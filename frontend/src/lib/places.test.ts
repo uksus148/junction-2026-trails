@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Place } from '../types'
 import type { Route } from '../types'
-import { contextPlaces, mergePlaces, routeEndpoints, sourceLink, uniqueById } from './places'
+import { contextPlaces, mergePlaces, routeEndpoints, sourceKind, sourceLink, uniqueById } from './places'
 
 const place = (id: string, source = 'test'): Place => ({ id, name: id, lat: 49.14, lon: 20.05, tags: ['waterfall'], photos: [], source })
 
@@ -80,5 +80,16 @@ describe('routeEndpoints', () => {
 describe('uniqueById', () => {
   it('keeps one entry per place for repeated visits, in first-visit order', () => {
     expect(uniqueById([place('a'), place('b'), place('a')]).map((p) => p.id)).toEqual(['a', 'b'])
+  })
+})
+
+describe('sourceKind', () => {
+  it.each([
+    ['https://en.wikipedia.org/wiki/Rysy', 'link'],
+    ['manual', 'manual'],
+    ['fixture', 'unavailable'],
+    ['javascript:alert(1)', 'unavailable'],
+  ])('classifies source "%s" as %s', (source, kind) => {
+    expect(sourceKind(place('x', source))).toBe(kind)
   })
 })

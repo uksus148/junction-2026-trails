@@ -6,6 +6,12 @@ export function sourceLink(place: Place): string | null {
   return safeUrl(place.source) ?? null
 }
 
+/** How to describe a place's provenance: only `source: "manual"` means it was added by hand. */
+export function sourceKind(place: Place): 'link' | 'manual' | 'unavailable' {
+  if (sourceLink(place)) return 'link'
+  return place.source === 'manual' ? 'manual' : 'unavailable'
+}
+
 /**
  * Chat places the route does not list. A route's `places` are its intermediate stops,
  * so for a chat route these are the start and finish places, in chat order.

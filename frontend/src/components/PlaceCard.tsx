@@ -1,4 +1,4 @@
-import { sourceLink } from '../lib/places'
+import { sourceKind, sourceLink } from '../lib/places'
 import type { Place } from '../types'
 
 interface PlaceCardProps {
@@ -31,7 +31,8 @@ export function PlaceCard({ place, onClose }: PlaceCardProps) {
             Source: {new URL(link).hostname} ↗
           </a>
         ) : (
-          <span className="text-stone">Added manually</span>
+          // Only "manual" means hand-added; other non-link values (e.g. "fixture") must not claim a provenance.
+          <span className="text-stone">{sourceKind(place) === 'manual' ? 'Added manually' : 'Source unavailable'}</span>
         )}
       </p>
     </section>
