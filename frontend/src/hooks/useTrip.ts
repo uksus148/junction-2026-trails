@@ -16,6 +16,8 @@ export function useTrip() {
   const [start, setStart] = useState<LatLon | null>(null)
   const [end, setEnd] = useState<LatLon | null>(null)
   const [places, setPlaces] = useState<Place[]>([])
+  // Places returned with a chat route: start, stops and finish. The route itself lists only the stops.
+  const [chatPlaces, setChatPlaces] = useState<Place[]>([])
   const [pickMode, setPickMode] = useState<PickMode>(null)
   const [pendingPoint, setPendingPoint] = useState<LatLon | null>(null)
   const task = useAsyncTask()
@@ -32,8 +34,10 @@ export function useTrip() {
       setMessages((prev) => [...prev, message('assistant', res.reply)])
       if (res.routeId) {
         showRoute(await api.getRoute(res.routeId))
+        setChatPlaces(res.places)
         return
       }
+      setChatPlaces([])
       // Places without a route (allowed by the contract): show them and drop the route that answered an earlier question.
       setRoute(null)
       setSelectedSegment(null)
@@ -63,11 +67,12 @@ export function useTrip() {
     if (!start || !end) return Promise.resolve()
     return task.run(async () => {
       showRoute(await api.createRoute({ start, end, placeIds: places.map((p) => p.id), preferences: [] }))
+      setChatPlaces([])
     })
   }
 
   return {
-    messages, route, selectedSegment, start, end, places, pickMode, pendingPoint,
+    messages, route, selectedSegment, start, end, places, chatPlaces, pickMode, pendingPoint,
     busy: task.busy, error: task.error, clearError: task.clearError,
     sendMessage, handleMapClick, savePlace, removePlace, buildRoute,
     setPickMode, setSelectedSegment, cancelPendingPlace: () => setPendingPoint(null),

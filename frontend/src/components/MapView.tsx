@@ -3,6 +3,7 @@ import type { GeoJSONSource, MapMouseEvent } from 'maplibre-gl'
 import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url'
 import { useEffect, useRef, useState } from 'react'
 import { boundsOf, sliceLineByFraction } from '../lib/geo'
+import { contextPlaces } from '../lib/places'
 import type { LatLon, Place, Route } from '../types'
 import type { PickMode } from '../hooks/useTrip'
 
@@ -21,12 +22,14 @@ interface MapViewProps {
   start: LatLon | null
   end: LatLon | null
   places: Place[]
+  chatPlaces: Place[]
   pendingPoint: LatLon | null
   pickMode: PickMode
   onMapClick: (point: LatLon) => void
+  onSelectPlace: (placeId: string) => void
 }
 
-type MarkerSpec = { point: LatLon; label: string; title: string; variant: 'start' | 'end' | 'place' | 'pending' }
+type MarkerSpec = { point: LatLon; label: string; title: string; variant: 'start' | 'end' | 'place' | 'pending'; placeId?: string }
 
 const MARKER_CLASSES: Record<MarkerSpec['variant'], string> = {
   start: 'bg-moss text-white',
@@ -35,22 +38,47 @@ const MARKER_CLASSES: Record<MarkerSpec['variant'], string> = {
   pending: 'bg-white text-trail border-2 border-dashed border-trail',
 }
 
-function markerElement(spec: MarkerSpec): HTMLElement {
+function markerElement(spec: MarkerSpec, onSelect: (placeId: string) => void): HTMLElement {
   const el = document.createElement('div')
-  el.className = `grid size-8 place-items-center rounded-full text-sm font-semibold shadow-lg ring-2 ring-white ${MARKER_CLASSES[spec.variant]}`
+  // No transition/transform utilities here: MapLibre positions markers with `transform`, and animating it
+  // makes the marker slide away between mousedown and mouseup, so the click never lands.
+  const clickable = spec.placeId ? 'cursor-pointer hover:brightness-110' : ''
+  el.className = `grid size-8 place-items-center rounded-full text-sm font-semibold shadow-lg ring-2 ring-white ${MARKER_CLASSES[spec.variant]} ${clickable}`
   el.textContent = spec.label
   el.title = spec.title
+  const { placeId } = spec
+  if (placeId) {
+    el.setAttribute('role', 'button')
+    el.addEventListener('click', (event) => {
+      event.stopPropagation() // don't also count as a map click while picking points
+      onSelect(placeId)
+    })
+  }
   return el
+}
+
+const toLatLon = (coordinate: [number, number] | undefined): LatLon | null =>
+  coordinate ? { lat: coordinate[1], lon: coordinate[0] } : null
+
+/** Start and finish come from the chat's places when it returned them, otherwise from the track's ends. */
+function endpointSpecs(props: MapViewProps): MarkerSpec[] {
+  const coordinates = props.route?.geojson.coordinates ?? []
+  const extra = contextPlaces(props.route?.places ?? [], props.chatPlaces)
+  const startPlace = extra.find((p) => p.id === props.chatPlaces[0]?.id)
+  const endPlace = extra.find((p) => p.id === props.chatPlaces.at(-1)?.id && p.id !== startPlace?.id)
+  const start = props.start ?? startPlace ?? toLatLon(coordinates[0])
+  const end = props.end ?? endPlace ?? (props.route ? toLatLon(coordinates.at(-1)) : null)
+  return [
+    ...(start ? [{ point: start, label: 'A', title: startPlace?.name ?? 'Start', variant: 'start' as const, placeId: startPlace?.id }] : []),
+    ...(end ? [{ point: end, label: 'B', title: endPlace?.name ?? 'Finish', variant: 'end' as const, placeId: endPlace?.id }] : []),
+  ]
 }
 
 function markerSpecs(props: MapViewProps): MarkerSpec[] {
   const routePlaces = props.route?.places ?? props.places
-  const first = props.route?.geojson.coordinates[0]
-  const startPoint = props.start ?? (first ? { lat: first[1], lon: first[0] } : null)
   return [
-    ...(startPoint ? [{ point: startPoint, label: 'A', title: 'Start', variant: 'start' as const }] : []),
-    ...routePlaces.map((p, i) => ({ point: p, label: String(i + 1), title: p.name, variant: 'place' as const })),
-    ...(props.end ? [{ point: props.end, label: 'B', title: 'Finish', variant: 'end' as const }] : []),
+    ...endpointSpecs(props),
+    ...routePlaces.map((p, i) => ({ point: p, label: String(i + 1), title: p.name, variant: 'place' as const, placeId: p.id })),
     ...(props.pendingPoint ? [{ point: props.pendingPoint, label: '+', title: 'New place', variant: 'pending' as const }] : []),
   ]
 }
@@ -72,7 +100,12 @@ export function MapView(props: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<maplibregl.Map | null>(null)
   const clickRef = useRef(onMapClick)
+  const selectRef = useRef(props.onSelectPlace)
   const [loaded, setLoaded] = useState(false)
+
+  useEffect(() => {
+    selectRef.current = props.onSelectPlace
+  }, [props.onSelectPlace])
 
   useEffect(() => {
     clickRef.current = onMapClick
@@ -131,7 +164,9 @@ export function MapView(props: MapViewProps) {
     const map = mapRef.current
     if (!map) return
     const markers = (JSON.parse(specsKey) as MarkerSpec[]).map((spec) =>
-      new maplibregl.Marker({ element: markerElement(spec) }).setLngLat([spec.point.lon, spec.point.lat]).addTo(map),
+      new maplibregl.Marker({ element: markerElement(spec, (id) => selectRef.current(id)) })
+        .setLngLat([spec.point.lon, spec.point.lat])
+        .addTo(map),
     )
     return () => markers.forEach((m) => m.remove())
   }, [specsKey])

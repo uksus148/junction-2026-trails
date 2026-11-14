@@ -5,6 +5,14 @@ import type { LatLon, NewPlace } from '../types'
 
 export const DEMO_START: LatLon & { name: string } = { name: 'Štrbské Pleso', lat: 49.1191, lon: 20.0627 }
 
+/** The start as a sourced place: chat returns start, stops and finish as places (docs/AGENT_API_HANDOFF.md, D5). */
+export const DEMO_START_PLACE: NewPlace & { id: string; source: string } = {
+  id: 'demo-strbske-pleso',
+  ...DEMO_START,
+  tags: ['lake'],
+  source: 'https://en.wikipedia.org/wiki/%C5%A0trbsk%C3%A9_Pleso',
+}
+
 export const DEMO_PLACES: (NewPlace & { id: string; source: string })[] = [
   {
     id: 'demo-skok',
