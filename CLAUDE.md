@@ -116,6 +116,13 @@ Application tables are managed by Flyway migrations in `api`. Keep credentials i
 - Demo and fallback photos come from Wikimedia Commons geosearch: free, CORS enabled, with author and license.
 - MapLibre 6 with Vite needs an explicit worker URL. MapLibre's CSS overrides Tailwind's `absolute`, so the map element sits inside a wrapper.
 
+### Agent implementation
+
+- FastAPI chat uses Valkey sessions, explicit browser origins, bounded storage timeouts, and an overall request deadline. See [agent/README.md](agent/README.md).
+- Set `AGENT_ENABLE_DISCOVERY=true` to enable Claude intent extraction, Exa source research with a 24-hour Valkey cache, and rate-limited Nominatim geocoding. Fixture tests exercise the Tatras flow and another region; live provider credentials/model availability remain unverified.
+- Discovery returns the agreed `Place` shape with source links. Its `osm:<type>:<id>` identifiers are not persisted API identifiers; API ingestion and route handoff need agreement with Murat before these IDs can be used in `/api/routes`. No `routeId` is fabricated.
+- Licensed photo discovery, Gemini/pgvector ranking, and Kafka EXIF processing remain pending. Flyway migrations and the `photo.uploaded` payload must be agreed before shared persistence/event consumers are implemented. Day planning remains a proposal.
+
 ## Team and tasks
 
 ### Murat — backend, Java, Spring Boot, SQL, Docker, tests

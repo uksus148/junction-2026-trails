@@ -20,4 +20,10 @@ class Place(BaseModel):
     lon: float = Field(ge=-180, le=180)
     tags: list[str]
     photos: list[Photo] = Field(default_factory=list)
-    source: HttpUrl
+    source: str
+
+
+class ChatResponse(BaseModel):
+    reply: str
+    places: list[Place]
+    routeId: str | None = None

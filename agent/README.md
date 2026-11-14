@@ -1,6 +1,8 @@
 # GOPSTOP.PROTOCOL Agent
 
-The agent is a FastAPI service implementing the baseline `POST /api/chat` contract. This first block validates requests, stores each user/assistant exchange in Valkey, and returns an honest placeholder response with no discovered places until the intent and search integrations are implemented.
+The agent is a FastAPI service implementing the baseline `POST /api/chat` contract.
+It stores exchanges in Valkey and can discover sourced places with Claude, Exa,
+and Nominatim. Discovery is opt-in to conserve credits during local development.
 
 ## Run locally
 
@@ -38,7 +40,9 @@ Content-Type: application/json
 {"sessionId":"demo-session","message":"I want to hike from Štrbské Pleso to Rysy via Skok waterfall."}
 ```
 
-The response follows the shared contract: `{ "reply": string, "places": [] }`, with `routeId` omitted until a route is available. Invalid payloads return FastAPI's `422` validation response. If Valkey is unavailable, the service returns `503` and does not claim that the message was saved.
+The response follows `{reply, places:[Place], routeId?}`. `routeId` is omitted
+because route persistence is not connected yet. Invalid payloads return 422;
+storage/provider failures return 503 without saving a successful exchange.
 
 Run automated tests with `pytest`.
 
@@ -47,8 +51,8 @@ Run automated tests with `pytest`.
 `ClaudeIntentExtractor` uses Claude tool use and validates the internal
 `{start, end, mustSee[], preferences[]}` result. It accepts recent session history,
 keeps unknown endpoints null, and never asks the model for coordinates. The
-adapter is tested with HTTP fixtures and is connected to chat in the next
-discovery block. There are no live provider calls in the test suite.
+adapter uses recent session history for follow-ups. There are no live provider
+calls in the test suite.
 
 Set `ANTHROPIC_API_KEY` in the root `.env`. `AGENT_ANTHROPIC_MODEL` follows the
 team-plan default `claude-haiku-5-5`; select a model available to the team's account
@@ -65,5 +69,20 @@ Missing or ambiguous coordinates stay unresolved. Set `EXA_API_KEY` in the root
 `.env` and configure `AGENT_NOMINATIM_USER_AGENT` with the team's contact identity.
 `AGENT_NOMINATIM_BASE_URL` permits switching to a hosted geocoder. Display
 OpenStreetMap attribution when using its coordinates. Photo URLs and licensing
-are not inferred from arbitrary web images. The provider block is wired into
-chat by the next PR; tests use fixtures and make no live requests.
+are not inferred from arbitrary web images. Tests use fixtures and make no live requests.
+
+## Enable place discovery
+
+Set `AGENT_ENABLE_DISCOVERY=true` with `ANTHROPIC_API_KEY`, `EXA_API_KEY`, and a
+working Valkey connection in the root `.env`. Choose an available Claude model
+using `AGENT_ANTHROPIC_MODEL`. Send the Tatras example above, then a follow-up.
+Chat returns uniquely geocoded places, source links, and OSM attribution. Missing
+or ambiguous places trigger a clarification. `AGENT_CHAT_TIMEOUT_SECONDS` bounds
+the entire request (default 60 seconds), including provider calls and storage.
+When discovery is disabled, chat saves the message and returns a placeholder.
+
+Discovered IDs use `osm:<type>:<id>` and are not yet persisted API place IDs.
+Do not pass them to `/api/routes` until the API ingestion/identifier agreement is
+implemented. Route creation, licensed photo discovery, Gemini/pgvector ranking,
+and Kafka EXIF ingestion remain follow-up work. SQL tables and migrations belong
+to `api`; no guessed schema or event payload is introduced here.

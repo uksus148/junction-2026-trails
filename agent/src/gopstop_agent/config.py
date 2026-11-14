@@ -33,3 +33,5 @@ class Settings(BaseSettings):
         min_length=8,
     )
     nominatim_base_url: str = "https://nominatim.openstreetmap.org"
+    enable_discovery: bool = False
+    chat_timeout_seconds: float = Field(default=60, gt=0, le=180)
