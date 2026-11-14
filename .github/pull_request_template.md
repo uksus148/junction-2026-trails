@@ -14,4 +14,4 @@ Provide commands or steps, inputs, and actual results. State any outstanding che
 
 ### Review
 
-Request review from another developer with write access. For cross-service changes, choose a reviewer who owns the consuming component.
+List the affected components and request review from their owners, excluding the author. State which integration boundary each reviewer should check. For an internal change with a single owner, choose a colleague with relevant expertise for an independent check. Every PR requires review and at least one approval from another developer, including changes that affect no other component.
