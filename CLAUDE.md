@@ -11,7 +11,7 @@ This file is the team's single source of truth for developers and AI assistants.
 - English is the project language. Write repository files, code comments, documentation, commit messages, PR titles, descriptions, and reviews in English.
 - Use descriptive branch names such as `feat/places-bbox`, `fix/route-distance`, `docs/api-contract`, `infra/local-database`, or `chore/dependencies`.
 - The `codex/` prefix is prohibited for new branches.
-- Keep PRs small, about 400 hand-written lines. Split larger work into stacked PRs that each build and pass tests, and put generated files such as lockfiles in their own PR.
+- Keep PRs small, about 400 hand-written lines; generated files such as lockfiles don't count. Split larger work into stacked PRs that each build and pass tests, and keep a dependency manifest and its lockfile in the same PR so `npm ci` works on every revision.
 - Follow [CONTRIBUTING.md](CONTRIBUTING.md) and the [repository rules](docs/REPOSITORY_RULES.md).
 - Review this file before changing the code. Follow Murat's current task and agree shared contract changes with the affected developers.
 
@@ -186,7 +186,7 @@ Role-specific skills listed in the original team plan follow.
 - November 14 — Local development and CI use PostgreSQL 18 with PostGIS and pgvector. Configure the port through POSTGRES_PORT. Docker init enables extensions, Flyway in api manages tables. CI runs on PR changes under infra/**. Verified locally and in GitHub Actions, PR #1.
 - November 14 — English is the project language for repository files, commits, PRs, and reviews. Use descriptive task prefixes for new branches, such as feat/, fix/, docs/, infra/, or chore/.
 - November 14 — Frontend stack is React, Vite, Tailwind and MapLibre with OpenFreeMap. Wikimedia Commons is the demo and fallback photo source.
-- November 14 — Work is submitted as small PRs, stacked when large, with generated files in separate PRs.
+- November 14 — Work is submitted as small PRs, stacked when large. Generated files are excluded from the size budget and stay in the same PR as their manifest.
 
 ## Open questions and completed checks
 
