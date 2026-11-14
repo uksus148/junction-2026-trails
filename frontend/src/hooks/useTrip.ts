@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { api } from '../api/client'
 import { mergePlaces } from '../lib/places'
-import type { ChatMessage, LatLon, Place, Route } from '../types'
+import type { ChatMessage, LatLon, Place, PlanMode, Route } from '../types'
 import { useAsyncTask } from './useAsyncTask'
+import { useDayPlan } from './useDayPlan'
+import { usePreferences } from './usePreferences'
 
 export type PickMode = 'start' | 'end' | 'place' | null
 
@@ -10,6 +12,7 @@ const message = (role: ChatMessage['role'], text: string): ChatMessage => ({ id:
 
 export function useTrip() {
   const [sessionId] = useState(() => crypto.randomUUID())
+  const [mode, setMode] = useState<PlanMode>('route')
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [route, setRoute] = useState<Route | null>(null)
   const [selectedSegment, setSelectedSegment] = useState<number | null>(null)
@@ -19,6 +22,8 @@ export function useTrip() {
   const [pickMode, setPickMode] = useState<PickMode>(null)
   const [pendingPoint, setPendingPoint] = useState<LatLon | null>(null)
   const task = useAsyncTask()
+  const prefs = usePreferences()
+  const day = useDayPlan(task.run)
 
   const showRoute = (next: Route) => {
     setRoute(next)
@@ -28,8 +33,14 @@ export function useTrip() {
   const sendMessage = (text: string) => {
     setMessages((prev) => [...prev, message('user', text)])
     return task.run(async () => {
-      const res = await api.chat({ sessionId, message: text })
+      const res = await api.chat({ sessionId, message: text, mode, preferences: prefs.preferences })
+      if (res.preferencesPatch) prefs.applyLearned(res.preferencesPatch)
       setMessages((prev) => [...prev, message('assistant', res.reply)])
+      setMode(res.mode)
+      if (res.mode === 'day' && res.itineraryId) {
+        await day.load(res.itineraryId)
+        return
+      }
       if (res.routeId) {
         showRoute(await api.getRoute(res.routeId))
         return
@@ -62,14 +73,19 @@ export function useTrip() {
   const buildRoute = () => {
     if (!start || !end) return Promise.resolve()
     return task.run(async () => {
-      showRoute(await api.createRoute({ start, end, placeIds: places.map((p) => p.id), preferences: [] }))
+      showRoute(await api.createRoute({ start, end, placeIds: places.map((p) => p.id), preferences: [...prefs.preferences.interests] }))
     })
   }
 
+  const buildDayPlan = (startTime: string, endTime: string) => {
+    if (!start) return Promise.resolve()
+    return day.create({ start, placeIds: places.map((p) => p.id), preferences: prefs.preferences, startTime, endTime })
+  }
+
   return {
-    messages, route, selectedSegment, start, end, places, pickMode, pendingPoint,
+    mode, setMode, messages, route, selectedSegment, start, end, places, pickMode, pendingPoint, prefs, day,
     busy: task.busy, error: task.error, clearError: task.clearError,
-    sendMessage, handleMapClick, savePlace, removePlace, buildRoute,
+    sendMessage, handleMapClick, savePlace, removePlace, buildRoute, buildDayPlan,
     setPickMode, setSelectedSegment, cancelPendingPlace: () => setPendingPoint(null),
   }
 }

@@ -1,19 +1,26 @@
 import { useState } from 'react'
 import { USE_MOCKS } from '../api/client'
+import { DAY_DEMO_PROMPT, DAY_DEMO_PROMPT_ALT } from '../data/bratislava'
 import { DEMO_PROMPT } from '../data/tatras'
 import type { Trip } from '../hooks/useTrip'
 import { ChatPanel } from './ChatPanel'
 import { ManualPanel } from './ManualPanel'
+import { ModeSwitch } from './ModeSwitch'
+import { PreferencesPanel } from './PreferencesPanel'
 import { RouteSummary } from './RouteSummary'
 
-type Tab = 'chat' | 'manual'
+type Tab = 'chat' | 'manual' | 'me'
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'chat', label: 'Ask' },
   { id: 'manual', label: 'Plan on map' },
+  { id: 'me', label: 'Me' },
 ]
 
-const SUGGESTIONS = [DEMO_PROMPT]
+const SUGGESTIONS = {
+  route: [DEMO_PROMPT, DAY_DEMO_PROMPT],
+  day: [DAY_DEMO_PROMPT, DAY_DEMO_PROMPT_ALT],
+}
 
 interface SidebarProps {
   trip: Trip
@@ -21,6 +28,7 @@ interface SidebarProps {
 
 export function Sidebar({ trip }: SidebarProps) {
   const [tab, setTab] = useState<Tab>('chat')
+  const isDay = trip.mode === 'day'
   return (
     <aside className="flex h-[55dvh] min-h-0 flex-col border-line bg-paper md:h-auto md:w-[420px] md:border-r">
       <header className="space-y-3 px-5 pt-5 pb-3">
@@ -31,6 +39,7 @@ export function Sidebar({ trip }: SidebarProps) {
           </div>
           <p className="mt-1 text-sm text-stone">Routes built around what you want to see.</p>
         </div>
+        <ModeSwitch mode={trip.mode} onChange={trip.setMode} />
         <nav className="flex gap-1 rounded-xl bg-line/60 p-1" role="tablist">
           {TABS.map((t) => (
             <button
@@ -55,10 +64,20 @@ export function Sidebar({ trip }: SidebarProps) {
         </div>
       )}
 
-      {tab === 'chat' && <ChatPanel messages={trip.messages} busy={trip.busy} suggestions={SUGGESTIONS} onSend={(text) => void trip.sendMessage(text)} />}
+      {tab === 'chat' && (
+        <ChatPanel messages={trip.messages} busy={trip.busy} suggestions={SUGGESTIONS[trip.mode]} onSend={(text) => void trip.sendMessage(text)} />
+      )}
       {tab === 'manual' && <ManualPanel trip={trip} />}
+      {tab === 'me' && (
+        <PreferencesPanel
+          prefs={trip.prefs}
+          busy={trip.busy}
+          canUpdateDay={isDay && trip.day.itinerary !== null}
+          onUpdateDay={() => void trip.day.applyPreferences(trip.prefs.preferences)}
+        />
+      )}
 
-      {trip.route && <RouteSummary route={trip.route} />}
+      {!isDay && trip.route && <RouteSummary route={trip.route} />}
     </aside>
   )
 }
