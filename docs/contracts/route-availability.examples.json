@@ -1,0 +1,43 @@
+{
+  "status": "Draft consumer fixtures; not an implemented chat extension. Evidence URLs and facts are synthetic.",
+  "baselineRequest": {"sessionId": "baseline", "message": "Plan a hike via Skok."},
+  "researchRequest": {
+    "sessionId": "research-july",
+    "message": "Plan my July hike and investigate restrictions if routing fails.",
+    "availabilityResearch": {"enabled": true, "planningWindow": {"from": "2027-07-10", "to": "2027-07-12"}}
+  },
+  "disabledRequest": {
+    "sessionId": "no-research", "message": "Plan a hike.",
+    "availabilityResearch": {"enabled": false}
+  },
+  "needsDatesResponse": {
+    "reply": "Which dates are you planning for?", "places": [],
+    "availabilityResearch": {"status": "needs_dates", "evidence": []}
+  },
+  "unconfirmedResponse": {
+    "reply": "The router found no path. I could not confirm an independent restriction for your dates.", "places": [],
+    "routingFailure": {"code": "no_hiking_route"},
+    "availabilityResearch": {"status": "unconfirmed", "planningWindow": {"from": "2027-07-10", "to": "2027-07-12"}, "evidence": []}
+  },
+  "syntheticFindingResponse": {
+    "reply": "A waypoint could not be matched. Separately, this fixture notice describes a restriction for your dates; it does not establish why routing failed.",
+    "places": [], "routingFailure": {"code": "waypoint_not_routable"},
+    "availabilityResearch": {
+      "status": "findings", "planningWindow": {"from": "2027-11-10", "to": "2027-11-12"},
+      "evidence": [{
+        "kind": "restriction", "section": "Fixture named trail section", "summary": "Synthetic fixture restriction.",
+        "title": "Fixture authority notice", "url": "https://park.example.org/fixture-notice",
+        "retrievedAt": "2027-11-01T10:00:00Z", "publishedAt": "2027-10-20",
+        "appliesFrom": "2027-11-01", "appliesTo": "2028-05-31"
+      }]
+    }
+  },
+  "invalidChatResearchInputs": [
+    null,
+    {"enabled": "true"},
+    {"enabled": true, "planningWindow": {"from": "2027-02-30", "to": "2027-03-01"}},
+    {"enabled": true, "planningWindow": {"from": "2027-07-12", "to": "2027-07-10"}},
+    {"enabled": true, "planningWindow": {"from": "2027-07-10"}},
+    {"enabled": true, "unknown": "not supported"}
+  ]
+}

@@ -129,6 +129,13 @@ current agent's intent limit; excessive requests are rejected before provider wo
 non-null strings. Preferences are stored verbatim as descriptive interests and do not
 change the ORS request or track in this increment.
 
+Only those four root fields and `lat`/`lon` within each endpoint are accepted. Unknown
+fields return 400 `invalid_request`, including null-valued fields. Previously they were
+silently ignored. In particular, do not send planning dates, research consent, evidence,
+`radiuses` or `profile`: accepting them would imply unsupported routing conditions.
+The selected future research transport is `/api/chat`, owned by the agent; its
+[contract proposal](../docs/ROUTE_AVAILABILITY_CONTRACT.md) is not enabled by this Java change.
+
 A successful request returns HTTP **201 Created** with the baseline `Route`:
 `id`, `geojson`, `distanceKm`, `ascentM`, `durationMin`, `places`, and `segments`.
 `places` contains only intermediate visits, preserving order, duplicates, and source values.
@@ -155,7 +162,7 @@ Errors use `application/problem+json` with English `detail` and a stable `code`.
 
 | Status | Code | Meaning |
 |---|---|---|
-| 400 | `invalid_request` | Invalid or missing fields, UUID syntax, coordinates, or too many visits |
+| 400 | `invalid_request` | Invalid, missing or unknown fields, UUID syntax, coordinates, or too many visits |
 | 404 | `route_not_found` | Saved route UUID does not exist |
 | 422 | `unknown_place` | A referenced place UUID does not exist |
 | 422 | `no_hiking_route` | ORS 2009: no route between the requested locations |
@@ -165,8 +172,8 @@ Errors use `application/problem+json` with English `detail` and a stable `code`.
 | 503 | `cache_unavailable` | Required cache read/write/timeout failure or invalid cached data |
 | 504 | `routing_timeout` | Routing exceeded its configured deadline |
 
-Issue #49 splits numeric ORS 2009/2010 on HTTP 400/404 into the two 422 outcomes above;
-affected-owner review of this extension is pending. Neither confirms a trail closure,
+Merged #54 splits numeric ORS 2009/2010 on HTTP 400/404 into the two 422 outcomes above.
+Neither confirms a trail closure,
 difficulty filter or seasonal cause. The adapter never widens the radius, changes providers,
 drops waypoints or retries for success. See [demo verification](../docs/ROUTING_DIAGNOSTICS.md).
 Unknown errors, quota failures, authentication failures, and generic
@@ -188,17 +195,23 @@ wire coordinates, metric conversion, malformed data, explicit no-route codes, an
 Existing places and CORS tests remain in the suite. These fixture checks do not establish
 live ORS availability or complete frontend/agent integration.
 
-Latest local verification: **147 tests passed**, with no failures, errors, or skipped tests,
-using JDK 25 with Java 21 as the compilation target. The cache follow-up adds 20 cases to the
-127-case routing baseline. Real Valkey tests verify hits with the provider unavailable, a
+Latest local verification of the strict request boundary: **204 tests passed**, with
+no failures, errors or skipped tests, using JDK 25 targeting Java 21. Ten new HTTP cases
+reject root research/date/evidence/provider fields and nested endpoint dates. They assert
+400 `invalid_request`, zero provider calls, no route-cache entries and no persisted routes.
+The existing positive route tests still pass; Python research and frontend behavior are
+not implemented or verified by these Java tests.
+
+The earlier cache follow-up added 20 cases to the 127-case routing baseline.
+Real Valkey tests verify hits with the provider unavailable, a
 24-hour TTL without read refresh, expiration, rejected writes, paused-server deadlines,
 corrupt entries, changed place coordinates, and place validation before cache access.
 An offline configuration test checks TLS peer verification and timeouts for an Aiven-style
 endpoint. The Compose database-extension and Valkey smoke checks also passed locally.
 
 The routing baseline merged in [PR #39](https://github.com/uksus148/trego/pull/39).
-The cache follow-up is submitted separately from `feat/routing-valkey-cache`; check its
-current GitHub Actions results and independent review before merging. The staged agreement
+The cache follow-up merged separately in #41. Check the current branch's
+GitHub Actions results and independent review before merging new changes. The staged agreement
 does not establish live Aiven/ORS or complete agent/frontend acceptance.
 
 Review in this order: `RoutingGateway` and `RouteTrack`, `RouteService`, `RoutePersistence`

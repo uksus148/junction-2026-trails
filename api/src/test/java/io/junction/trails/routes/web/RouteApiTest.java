@@ -394,6 +394,42 @@ class RouteApiTest {
         assertThat(routeCount()).isZero();
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "\"availabilityResearch\":{\"enabled\":true}",
+            "\"availabilityResearch\":false", "\"availabilityResearch\":null",
+            "\"planningWindow\":{\"from\":\"2027-07-10\",\"to\":\"2027-07-12\"}",
+            "\"evidence\":[]", "\"radiuses\":[-1,-1]", "\"profile\":\"driving-car\"", "\"unknown\":1"
+    })
+    void rejectsChatResearchAndUnsupportedRoutingFieldsBeforeAnyWork(String extraField) {
+        String body = """
+                {"start":{"lat":49,"lon":20},"end":{"lat":49.2,"lon":20.2},
+                 "placeIds":[],"preferences":[],%s}
+                """.formatted(extraField);
+        var headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        var response = http.postForEntity("/api/routes", new HttpEntity<>(body, headers), JsonNode.class);
+        assertProblem(response.getStatusCode(), response.getBody(), 400, "invalid_request");
+        assertThat(ORS.getRequests()).isEmpty();
+        assertThat(valkey.keys(RoutingCacheKey.PREFIX + "*")).isEmpty();
+        assertThat(routeCount()).isZero();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"start", "end"})
+    void doesNotSilentlyTreatEndpointPlanningDatesAsRoutingConditions(String endpoint) {
+        var plain = Map.of("lat", 49.0, "lon", 20.0);
+        var dated = Map.of("lat", 49.0, "lon", 20.0, "planningWindow", Map.of("from", "2027-07-10", "to", "2027-07-12"));
+        var response = http.postForEntity("/api/routes", Map.of(
+                "start", endpoint.equals("start") ? dated : plain,
+                "end", endpoint.equals("end") ? dated : plain,
+                "placeIds", List.of(), "preferences", List.of()), JsonNode.class);
+        assertProblem(response.getStatusCode(), response.getBody(), 400, "invalid_request");
+        assertThat(ORS.getRequests()).isEmpty();
+        assertThat(valkey.keys(RoutingCacheKey.PREFIX + "*")).isEmpty();
+        assertThat(routeCount()).isZero();
+    }
+
     private org.springframework.http.ResponseEntity<JsonNode> create(List<String> ids) {
         return http.postForEntity("/api/routes", Map.of("start", Map.of("lat", 49.0, "lon", 20.0),
                 "end", Map.of("lat", 49.2, "lon", 20.2), "placeIds", ids,
