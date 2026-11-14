@@ -1,14 +1,15 @@
 # Researching route availability after a routing failure
 
 **Status: Murat selected an optional extension to `POST /api/chat`; public research is
-not connected.** He authorized only his Java/backend integration work in this slice.
-Mukhamed's parallel [PR #56](https://github.com/uksus148/trego./pull/56) prepares an
-internal core, without HTTP activation; review its interface together with this proposal.
+not connected.** #57 records his Java/backend integration work. Mukhamed requested his
+parallel [PR #56](https://github.com/uksus148/trego./pull/56) internal core; see
+[its interface and limits](../agent/AVAILABILITY.md), without HTTP activation.
+Review that interface together with the public proposal.
 The [wire proposal and ownership boundary](ROUTE_AVAILABILITY_CONTRACT.md) and
 [consumer fixtures](contracts/route-availability.examples.json) need affected-owner
 review before agent/frontend activation. Baseline E5 remains a separate delivery gate.
 [CLAUDE.md](../CLAUDE.md) remains the contract authority.
-The accompanying [issue #49 fix](ROUTING_DIAGNOSTICS.md) only distinguishes routing errors;
+The merged [issue #49 fix](ROUTING_DIAGNOSTICS.md), #54, only distinguishes routing errors;
 it adds no post-failure web search, date-aware routing or automatic fallback.
 
 ## Goal and evidence boundary
@@ -100,3 +101,19 @@ Use [routing diagnostics](ROUTING_DIAGNOSTICS.md) for the already observed Rysy/
 failure and the summer-planning alternative. The geocoding correction for
 [issue #51](https://github.com/uksus148/trego./issues/51) merged in #52; combined baseline
 browser E5 is still a separate gate, not implicitly completed by this proposal.
+
+## Internal agent delivery
+
+The prepared core validates explicit ISO planning dates/months/ranges and asks for
+missing year/scope. It requires opt-in and reviewed host/freshness policy, makes at
+most one fresh Exa search and one tool assessment within the remaining deadline,
+and validates source-bound dates/quotes, freshness and conflicting notices.
+Publication/update roles are checked against literal source metadata, independently
+of model labels. Assessment requires uncapped full-text retrieval within the content
+budget; potentially partial sources remain unconfirmed without another search.
+Typed results preserve the technical failure separately; they make no routing,
+session, SQL or event writes. The normal place-search cache is unchanged; optional
+notices are request-scoped. Free-form dates and notices without literal ISO dates
+remain unconfirmed/clarified in this first slice rather than being inferred.
+Exact chat mapping, localized presentation, production policy and activation still
+need affected-owner review against the selected wire proposal. The core enables no public fields.

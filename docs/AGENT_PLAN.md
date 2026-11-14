@@ -51,6 +51,13 @@ ledger, environment prerequisites, diagnostic sequence and actual end-to-end evi
 
 ## Sequential blocks
 
+The #54 review is complete and the typed routing correction merged at `41ffe14`
+(265 agent tests). Mukhamed requested his optional availability-research slice next.
+The [internal core](../agent/AVAILABILITY.md) prepares date clarification, bounded
+fresh Exa research and source/date validation without changing HTTP chat or startup.
+It is fixture-tested with both selected LLM transports; public integration, trigger,
+freshness policy and evidence presentation still need the affected owners' agreement.
+
 Finish review, fixes, applicable checks, and merge before starting another block.
 Create branches from current main. Mukhamed authorized combining coherent blocks
 into PRs below 1000 changed lines to accelerate delivery; #31 combined providers

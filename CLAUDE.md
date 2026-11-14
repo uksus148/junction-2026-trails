@@ -99,9 +99,14 @@ the current agent still rejects the proposed new request fields. No research run
 or date-aware routing is enabled. Independently verified restrictions may be reported
 with sources; they are not proof of why ORS failed. This specific direction does not
 approve unrelated deferred chat/planner features.
-Mukhamed's parallel [PR #56](https://github.com/uksus148/trego./pull/56) proposes the
-internal research core without HTTP activation. Its date/evidence mapping still needs
-review against the public proposal; this Java work does not include the agent code.
+Mukhamed requested the [internal agent core](agent/AVAILABILITY.md) in parallel
+[PR #56](https://github.com/uksus148/trego./pull/56): explicit date clarification,
+request-scoped Exa/official-source validation and independent technical/evidence results.
+It is not wired into chat/startup; its date/evidence mapping still needs affected-owner
+review against the selected public proposal. The Java work does not include this agent code.
+Ordinary Exa place searches keep their 24-hour cache. The internal notice workflow
+uses a distinct fresh, request-scoped search; this exception and its operator-selected
+host/freshness policy are included in the agent-core review before public integration.
 
 ### API contract
 

@@ -42,6 +42,52 @@ async def test_search_retains_sources_and_reuses_cache_for_one_day(cache):
     assert 0 < await cache.ttl(keys[0]) <= 86400
 
 
+async def test_fresh_official_search_does_not_read_overwrite_or_refresh_the_place_cache(cache):
+    calls = []
+
+    def handle(request):
+        calls.append(request)
+        assert json.loads(request.content)["includeDomains"] == ["authority.example"]
+        return httpx.Response(200, json={"results": [{"url": "https://authority.example/notice",
+                                                      "text": "old" if len(calls) == 1 else "fresh"}]})
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handle)) as client:
+        search = ExaSearch(client, cache, "fixture")
+        await search.search("official notice", include_domains=("authority.example",))
+        key, = await cache.keys("gopstop:exa-text:v1:*")
+        await cache.expire(key, 100)
+        fresh = await search.search("official notice", use_cache=False, include_domains=("authority.example",))
+        assert fresh[0].text == "fresh" and len(calls) == 2
+        assert json.loads(await cache.get(key))[0]["text"] == "old"
+        assert 0 < await cache.ttl(key) <= 100
+
+
+async def test_fresh_search_does_not_replay_a_redirect_even_with_a_redirecting_client(cache):
+    calls = []
+
+    def handle(request):
+        calls.append(request)
+        return httpx.Response(307, headers={"Location": "https://untrusted.example"})
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handle), follow_redirects=True) as client:
+        with pytest.raises(ProviderError):
+            await ExaSearch(client, cache, "fixture").search("official notice", use_cache=False)
+    assert len(calls) == 1 and not await cache.keys("gopstop:exa-text:v1:*")
+
+
+async def test_ordinary_cached_excerpts_never_gain_completeness_or_change_their_serialized_shape(cache):
+    async with httpx.AsyncClient(transport=httpx.MockTransport(lambda _: httpx.Response(200, json={
+        "results": [{"url": "https://example.org/notice", "text": "short", "textComplete": True}],
+    }))) as client:
+        search = ExaSearch(client, cache, "fixture")
+        for _ in range(2):
+            source, = await search.search("notice")
+            assert source.textComplete is False
+            assert set(source.model_dump()) == {"title", "sourceUrl", "text"}
+        with pytest.raises(ValueError):
+            await search.search("notice", full_text=True)
+
+
 async def test_queries_have_separate_caches_and_empty_results_are_cached(cache):
     calls = []
 
