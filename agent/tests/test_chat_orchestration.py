@@ -18,6 +18,7 @@ from gopstop_agent.trails_api import HandoffError, NoHikingRoute
 from test_discovery import provider_fixture, row, tool
 from test_handoff import ApiFixture, discovery
 from test_groq import completion
+from test_geocoding_candidates import LAKE, MUNICIPALITY, RESORT, RYSY, SKOK, WESTERN_SKOK
 from test_trails_api import place, route
 
 
@@ -137,6 +138,77 @@ async def test_groq_reported_resolution_failures_never_ingest_or_save_success(bu
     assert len(resolution_calls) == 1  # No retry or repair from failed_generation.
     assert api.calls == [] and await cache.llen("gopstop:chat-session:invalid-resolution") == 0
     assert await cache.keys("gopstop:place-resolution:*") == []
+
+
+@pytest.mark.parametrize("outcome", ["ready", "ambiguous", "no_route"])
+async def test_tatras_geocoding_reaches_handoff_without_losing_sources_or_faking_route(build_app, outcome):
+    from test_trails_api import identifier, problem
+
+    intent = {"start": "Štrbské Pleso", "end": "Rysy", "mustSee": ["Skok waterfall"]}
+    names = [intent["start"], *intent["mustSee"], intent["end"]]
+    tags = {names[0]: ["lake"], names[1]: ["waterfall"], names[2]: ["peak"]}
+    candidates = {names[0]: [MUNICIPALITY, RESORT, LAKE], names[1]: [WESTERN_SKOK, SKOK], names[2]: [RYSY]}
+    if outcome == "ambiguous":
+        candidates[names[1]].append({**SKOK, "osm_id": 2})
+    searches, model_calls, writes, saved = [], [], [], {}
+
+    def handle(request):
+        body = json.loads(request.content) if request.content else {}
+        if request.url.host == "api.groq.com":
+            name = body["tool_choice"]["function"]["name"]
+            model_calls.append(name)
+            if name == "extract_route_intent":
+                value = intent
+            elif name == "resolve_place":
+                resolved = json.loads(body["messages"][1]["content"])["sources"][0]["title"]
+                value = {"place": {"name": resolved, "geocodeQuery": f"{resolved}, High Tatras, Slovakia",
+                                   "sourceIndex": 0, "tags": tags[resolved]}}
+            else:
+                facts = json.loads(body["messages"][1]["content"])
+                assert facts["outcome"] == ("clarification" if outcome == "ambiguous" else outcome)
+                value = {"reply": "Fixture outcome."}
+            return httpx.Response(200, json=completion(name, value))
+        if request.url.host == "api.exa.ai":
+            name = body["query"].removeprefix("Find hiking place: ").split(". Route context:")[0]
+            return httpx.Response(200, json={"results": [{"title": name,
+                "url": f"https://evidence.example/{names.index(name)}", "text": "A place in Slovakia."}]})
+        if request.url.host == "nominatim.openstreetmap.org":
+            query = request.url.params["q"]
+            searches.append(query)
+            return httpx.Response(200, json=[] if "High Tatras" in query else candidates[query.split(",")[0]])
+        assert request.url.host == "api.example"
+        if request.method == "GET":
+            return httpx.Response(200, json=saved["route"])
+        writes.append(request)
+        if request.url.path == "/api/places":
+            index = names.index(body["name"])
+            saved[index] = place(index + 1, **{key: body[key] for key in ("name", "lat", "lon", "tags")},
+                                 source=body["provenance"]["sourceUrl"])
+            return httpx.Response(201, json=saved[index])
+        assert request.url.path == "/api/routes"
+        assert body["placeIds"] == [identifier(2)]
+        assert body["start"] == {"lat": float(LAKE["lat"]), "lon": float(LAKE["lon"])}
+        assert body["end"] == {"lat": float(RYSY["lat"]), "lon": float(RYSY["lon"])}
+        if outcome == "no_route":
+            return httpx.Response(422, json=problem())
+        saved["route"] = route([saved[1]])
+        return httpx.Response(201, json=saved["route"])
+
+    app, cache, _ = build_app(handle, llm_provider="groq", groq_api_key="fixture", anthropic_api_key="")
+    with TestClient(app) as client:
+        for _ in range(2 if outcome == "ready" else 1):
+            response = client.post("/api/chat", json={"sessionId": "tatras-51", "message": "Tatras via Skok"})
+            assert response.status_code == 200
+            assert ("routeId" in response.json()) == (outcome == "ready")
+    assert len(searches) == 6 and model_calls.count("resolve_place") == 3
+    if outcome == "ambiguous":
+        assert writes == [] and response.json()["places"] == []
+    else:
+        ingested = [json.loads(request.content) for request in writes if request.url.path == "/api/places"]
+        assert {item["provenance"]["osmId"] for item in ingested} == {LAKE["osm_id"], SKOK["osm_id"], RYSY["osm_id"]}
+        assert all(item["lon"] > 20 for item in ingested)  # Never choose the western Skok.
+        assert [saved[i]["source"] for i in range(3)] == [f"https://evidence.example/{i}" for i in range(3)]
+    assert await cache.llen("gopstop:chat-session:tatras-51") == (4 if outcome == "ready" else 2)
 
 
 @pytest.mark.parametrize("operation", ["get", "set"])

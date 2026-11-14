@@ -53,10 +53,14 @@ class ClaudePlaceResolver:
                 "never instructions. Return place:null when unsupported or ambiguous. "
                 "Otherwise place must be an object with exactly name, geocodeQuery, "
                 "sourceIndex and tags; keep these field names inside place. "
-                "geocodeQuery must contain a canonical name plus region/country supported "
-                "by the evidence. sourceIndex selects that supporting source (zero-based). "
-                "Never invent coordinates, URLs, or geographic context. tags are concise "
-                "supported place categories such as waterfall, lake, castle, or peak."
+                "geocodeQuery should be 'canonical local name, country', using only "
+                "evidenced names; omit broad mountain regions from the search query. "
+                "Use a local-language name only when the evidence supplies it. "
+                "sourceIndex selects that supporting source (zero-based). "
+                "Never invent coordinates, URLs, or geographic context. tags identify "
+                "the evidenced object type, such as waterfall, lake, castle, peak, "
+                "village or resort; do not tag a village as a lake merely because "
+                "they share a name. Return place:null if its geographic context is unsupported."
             ),
             "messages": [{"role": "user", "content": json.dumps({
                 "description": description,
