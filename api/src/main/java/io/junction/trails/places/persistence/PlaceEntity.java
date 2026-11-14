@@ -45,6 +45,14 @@ public class PlaceEntity {
     @Getter
     private String source;
 
+    @Column(name = "osm_type", columnDefinition = "text")
+    @Getter
+    private String osmType;
+
+    @Column(name = "osm_id")
+    @Getter
+    private Long osmId;
+
     public PlaceEntity(NewPlace place, String source) {
         if (source == null || source.isBlank()) {
             throw new IllegalArgumentException("source must not be blank");
