@@ -1,9 +1,9 @@
-# Proposal: sourced place ingestion and chat-to-route handoff
+# trego. Sourced place ingestion and chat-to-route handoff
 
-**Status: proposed; frontend agreement recorded, Murat's decision pending.** This is
+**Status: accepted design in merged PR #34; runtime implementation incomplete.** This is
 block 3 of [the agent plan](AGENT_PLAN.md), following merged PR #31. It does not
 enable HTTP discovery, implement API writes, or change the published contract.
-Record accepted decisions in [CLAUDE.md](../CLAUDE.md) before implementation.
+The accepted decisions are published in [CLAUDE.md](../CLAUDE.md#accepted-sourced-place-and-route-handoff).
 
 ## Scope and ownership
 
@@ -25,7 +25,7 @@ Keep manual creation exactly as the frontend sends it today:
 {"name":"My viewpoint","lat":49.15,"lon":20.07,"tags":["viewpoint"]}
 ```
 
-The API's concurrent [manual-creation PR #33](https://github.com/uksus148/junction-2026-trails/pull/33)
+The API's concurrent [manual-creation PR #33](https://github.com/uksus148/trego/pull/33)
 builds on #32. This proposal extends that work after its own review/merge; it does
 not replace the JPA foundation or treat unmerged handlers as available. Keep its
 proposed normalization: all four baseline fields required, empty tags allowed,
@@ -247,29 +247,28 @@ display should be inferred from a model-generated statement.
 ## Recorded review decisions
 
 - Mukhamed proposes D1–D5 as the agent-side handoff in this PR.
-- [Daniil's owner response](https://github.com/uksus148/junction-2026-trails/pull/34#pullrequestreview-5901154716)
+- [Daniil's owner response](https://github.com/uksus148/trego/pull/34#pullrequestreview-5901154716)
   explicitly accepts D1, D3, D4, and D5 and takes the frontend follow-ups. This
   agreement does not mean those frontend changes are implemented. D2 remains an
   API/agent decision; do not infer Daniil's acceptance of it from that response.
-- [The technical review from Murat's account](https://github.com/uksus148/junction-2026-trails/pull/34#pullrequestreview-5901143335)
-  checks the proposal and identifies the integration gap above, but explicitly
-  does **not** accept D1–D5 on Murat's behalf. Murat's personal architectural
-  choice on provenance, deduplication/replay, routing, and errors is still
-  required. A technical COMMENT is not that approval.
+- [Murat's final owner response](https://github.com/uksus148/trego/pull/34#pullrequestreview-5904059886)
+  explicitly accepts D1–D4 as his personal API/storage decision and approves the
+  clarified D5 ownership and scenarios. This supersedes the earlier technical
+  COMMENT and pending-decision wording; it is not inferred from that COMMENT.
 
-The shared write contract remains proposed until the required owner decisions
-are explicit and published in CLAUDE.md. Review of these documentation fixes
-does not itself enable any handler or remove the runtime acceptance gates.
+The shared design is accepted and recorded in CLAUDE.md. API handlers, agent
+integration, and live acceptance still need implementation/review. Frontend
+follow-ups #35–#37 are merged; their fixture checks are not live route acceptance.
 
-## Acceptance and rollout after agreement
+## Implementation and acceptance after agreement
 
-1. **Murat + Mukhamed:** explicitly accept or amend D1/D2 (provenance shape,
-   persisted source, atomic OSM deduplication, replay semantics) and D3/D4 (route
-   order, preferences, codes, persistence, and failure behavior).
+1. **Murat + Mukhamed:** D1–D4 agreement is recorded above and in CLAUDE.md.
+   Murat owns API implementation and Flyway; Mukhamed owns the agent client.
+   Further shared changes need affected-owner agreement.
 2. **Daniil:** D1/D3/D4/D5 acceptance is recorded above. Review the clarified D5
    frontend work and acceptance scenarios below; implementation remains his
    follow-up. Approval of internal discovery #31 did not approve API writes.
-3. Record the accepted decisions and examples in CLAUDE.md. Murat implements the
+3. The accepted decisions and examples are in CLAUDE.md. Murat implements the
    API-owned writes/routes on that agreed contract; test concurrency, malformed
    inputs, repeated stops, no-route, outages, and saved-route retrieval.
 4. Mukhamed's next agent implementation connects chat using fixtures for the
@@ -277,7 +276,8 @@ does not itself enable any handler or remove the runtime acceptance gates.
    check required keys at startup and impose one total chat deadline. Address
    Daniil's #31 latency suggestion with bounded concurrent research/resolution,
    while keeping shared Nominatim serialization and cancellation guarantees.
-5. Daniil implements the D5 frontend changes before live route acceptance. Test
+5. Daniil implemented the D5 frontend follow-ups in #35–#37. Before live
+   acceptance, test
    a direct chat hike with `placeIds: []`, `Route.places: []`, and no photos:
    show both track endpoint markers and both endpoint research sources, without
    an empty gallery. Test a chat route after choosing different manual endpoints:
@@ -289,5 +289,5 @@ does not itself enable any handler or remove the runtime acceptance gates.
    failure across real services and frontend. Verify source links, OSM credit,
    UUID mapping, cached repeat requests, and retrieval of the same saved route.
 
-Finish this PR's agreement and review before opening the next implementation PR.
-An approval that omits a contract decision must not be presented as its acceptance.
+Finish each implementation PR's review and merge before starting another block.
+Agreement must not be presented as completed implementation or live acceptance.
