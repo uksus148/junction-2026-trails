@@ -37,6 +37,7 @@ Replace pending evidence with a PR/run link and tested revision; retain useful h
 | B3 | Discovery and internal API handoff | Mukhamed | Merged internally | #31, #40; fixtures do not enable HTTP chat |
 | B4 | Frontend route/source/error compatibility | Daniil | Merged | #35-#37; live browser acceptance pending |
 | B5 | Reuse source-grounded Claude resolutions | Mukhamed | Merged | [#44](https://github.com/uksus148/trego./pull/44), main `440f69d`; 202 agent fixture tests; live latency unmeasured |
+| B6 | Groq GPT OSS 20B and executable live checks | Mukhamed | Prepared; awaiting review | [#47](https://github.com/uksus148/trego./pull/47), tested `fabaef6`: 235 fixture tests; team-machine preflight/browser evidence pending |
 | E1 | Researched place ingestion and OSM deduplication | Murat | Merged | [#45](https://github.com/uksus148/trego./pull/45), both approvals; deploy V3 on the selected target |
 | E2 | HTTP chat orchestration and total deadline | Mukhamed | Merged; default disabled | [#43](https://github.com/uksus148/trego./pull/43); this PR prepares selected Groq transport and live checks |
 | E3 | Real-service frontend verification | Daniil | Pending | Disable mocks; verify direct/chat routes, sources, markers and errors |
