@@ -34,8 +34,10 @@ Before implementing the relevant HTTP handlers, the backend will propose identif
 [The agent/API handoff proposal](AGENT_API_HANDOFF.md) supplies concrete examples
 for optional research provenance on place creation, OSM deduplication into API
 UUIDs, ordered route persistence, machine-readable errors, and chat completion.
-It is awaiting explicit agreement from Murat and Daniil; no new write endpoint
-behavior or schema is approved by that document alone. The merged read API's
+It records Daniil's explicit D1/D3/D4/D5 acceptance and required frontend
+integration work. Murat's personal API/storage decision remains pending; a
+technical COMMENT from his account is not architectural approval. No new write
+endpoint behavior or schema is approved by that document alone. The merged read API's
 UUID strings and the original public Place/Route/chat shapes remain the baseline.
 
 ## Recording agreement

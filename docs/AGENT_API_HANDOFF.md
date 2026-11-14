@@ -1,6 +1,6 @@
 # Proposal: sourced place ingestion and chat-to-route handoff
 
-**Status: proposed, awaiting Murat and Daniil's explicit agreement.** This is
+**Status: proposed; frontend agreement recorded, Murat's decision pending.** This is
 block 3 of [the agent plan](AGENT_PLAN.md), following merged PR #31. It does not
 enable HTTP discovery, implement API writes, or change the published contract.
 Record accepted decisions in [CLAUDE.md](../CLAUDE.md) before implementation.
@@ -8,8 +8,9 @@ Record accepted decisions in [CLAUDE.md](../CLAUDE.md) before implementation.
 ## Scope and ownership
 
 Murat implements place persistence, deduplication, routing, and Flyway migrations.
-Mukhamed implements the agent's API client and chat orchestration. Daniil checks
-manual creation, route fetching, sources, and map consumption. Public `Place`,
+Mukhamed implements the agent's API client and chat orchestration. Daniil owns
+the frontend changes below: manual creation compatibility, route fetching,
+source display, markers, and error presentation. Public `Place`,
 `Route`, and chat response shapes stay as published; the proposed write extension
 is optional provenance on `POST /api/places`. Day planning remains deferred.
 
@@ -203,26 +204,71 @@ request and `Route.places` still preserve repeated intermediate visits.
 }
 ```
 
-The frontend fetches
-`GET /api/routes/{routeId}` and displays that response, as it does today.
+The frontend fetches `GET /api/routes/{routeId}`. Its current successful-chat
+path returns before retaining the chat's `places`, and the map uses
+`route.places`, which D3 defines as intermediate stops only. It also prefers an
+old manually selected start and only shows a finish marker for a manually
+selected end. Fetching a route alone therefore does not complete this handoff:
+endpoint Place records and sources are lost, and endpoint markers can be stale
+or absent. These are frontend integration tasks, not implemented by this PR.
+
+**Daniil's frontend follow-up before live route acceptance:**
+
+- Retain the chat's persisted `places` alongside the fetched route, including
+  start/end records and their source URLs. Keep this display metadata separate
+  from manually requested intermediate stops; do not turn endpoints into extra
+  waypoints when a user subsequently builds a route manually.
+- Apply the new route and its chat place metadata together after fetching the
+  route. Derive both A and B marker coordinates from the first/last track
+  coordinates; reset stale manual endpoint state when showing the chat route.
+  Keep the endpoint Place metadata available for names and source links even if
+  ORS snaps the track endpoints away from the stored place coordinates.
+- Deduplicate displayed place markers by UUID while retaining repeated visits
+  in the route request, `Route.places`, and segment order. Endpoint source
+  records must remain accessible for a direct hike with no intermediate stops.
+- Add source links to place popups or equivalent place details, so attribution
+  is accessible without photos. Hide the along-the-way strip when `segments`
+  is empty; it can appear once segments exist.
+- Parse API Problem Details (`detail`, `code`) and FastAPI `detail` for useful
+  error presentation instead of showing raw response JSON. Preserve the
+  distinction between `no_hiking_route` and dependency failures from D4.
+
 If saving the exchange fails after route creation, return 503; the saved route
 and places may remain, but do not claim the exchange was saved. Failed operations
 must not be appended as successful assistant replies.
 
 Normal and clarification replies follow the user's message language; UI labels
 stay English. Source links and visible OSM attribution must accompany geocoded
-results. The baseline has no attribution field: Daniil should confirm displaying
-the fixed OSM copyright link in the map UI. Neither photo licensing nor source
+results. Daniil confirmed that the existing map attribution control displays
+the OSM copyright link, so no attribution response field is proposed. Verify it
+remains visible with the deployed map style. Neither photo licensing nor source
 display should be inferred from a model-generated statement.
+
+## Recorded review decisions
+
+- Mukhamed proposes D1–D5 as the agent-side handoff in this PR.
+- [Daniil's owner response](https://github.com/uksus148/junction-2026-trails/pull/34#pullrequestreview-5901154716)
+  explicitly accepts D1, D3, D4, and D5 and takes the frontend follow-ups. This
+  agreement does not mean those frontend changes are implemented. D2 remains an
+  API/agent decision; do not infer Daniil's acceptance of it from that response.
+- [The technical review from Murat's account](https://github.com/uksus148/junction-2026-trails/pull/34#pullrequestreview-5901143335)
+  checks the proposal and identifies the integration gap above, but explicitly
+  does **not** accept D1–D5 on Murat's behalf. Murat's personal architectural
+  choice on provenance, deduplication/replay, routing, and errors is still
+  required. A technical COMMENT is not that approval.
+
+The shared write contract remains proposed until the required owner decisions
+are explicit and published in CLAUDE.md. Review of these documentation fixes
+does not itself enable any handler or remove the runtime acceptance gates.
 
 ## Acceptance and rollout after agreement
 
 1. **Murat + Mukhamed:** explicitly accept or amend D1/D2 (provenance shape,
    persisted source, atomic OSM deduplication, replay semantics) and D3/D4 (route
    order, preferences, codes, persistence, and failure behavior).
-2. **Daniil:** confirm D1 manual creation compatibility, D3 route consumption,
-   D4 error consumption, and D5 chat markers/language/attribution. Approval of
-   internal discovery #31 did not approve these new write contracts.
+2. **Daniil:** D1/D3/D4/D5 acceptance is recorded above. Review the clarified D5
+   frontend work and acceptance scenarios below; implementation remains his
+   follow-up. Approval of internal discovery #31 did not approve API writes.
 3. Record the accepted decisions and examples in CLAUDE.md. Murat implements the
    API-owned writes/routes on that agreed contract; test concurrency, malformed
    inputs, repeated stops, no-route, outages, and saved-route retrieval.
@@ -231,7 +277,15 @@ display should be inferred from a model-generated statement.
    check required keys at startup and impose one total chat deadline. Address
    Daniil's #31 latency suggestion with bounded concurrent research/resolution,
    while keeping shared Nominatim serialization and cancellation guarantees.
-5. Run the Tatras request, a follow-up, another region, ambiguity, and dependency
+5. Daniil implements the D5 frontend changes before live route acceptance. Test
+   a direct chat hike with `placeIds: []`, `Route.places: []`, and no photos:
+   show both track endpoint markers and both endpoint research sources, without
+   an empty gallery. Test a chat route after choosing different manual endpoints:
+   markers move to the new track and old manual coordinates do not take priority.
+   Also test repeated intermediate UUIDs: one place marker per UUID, ordered
+   repeated route visits, and source links for every returned place. Test
+   structured API/FastAPI errors and a clarification that clears the prior route.
+6. Run the Tatras request, a follow-up, another region, ambiguity, and dependency
    failure across real services and frontend. Verify source links, OSM credit,
    UUID mapping, cached repeat requests, and retrieval of the same saved route.
 

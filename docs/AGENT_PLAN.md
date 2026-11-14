@@ -36,7 +36,7 @@ against current contracts. Closed PRs #23–#25 are references, not a merge queu
 |---|---|---|
 | 1 | Exa text research and Valkey caching, merged in #28 and #31 | Sources retain URLs; repeated queries use a 24-hour cache; mixed-result resilience is tested |
 | 2 | Source-grounded resolution, Nominatim, and internal discovery, merged in #31 | A request yields ordered sourced findings with unique WGS84 coordinates and attribution; ambiguous/missing places stay unresolved; shared rate limits, caching, and overall deadlines are tested |
-| 3 | API ingestion and route handoff agreement, proposed in [the handoff document](AGENT_API_HANDOFF.md) | Murat, Mukhamed, and Daniil explicitly accept or amend D1–D5; accepted decisions are recorded in CLAUDE.md before implementation |
+| 3 | API ingestion and route handoff agreement, proposed in [the handoff document](AGENT_API_HANDOFF.md) | Daniil accepted D1/D3/D4/D5 and owns frontend follow-ups; Murat's personal API/storage decision remains pending; accepted decisions are published in CLAUDE.md before implementation |
 | 4 | Chat-to-route orchestration | Intent, research, geocoding, API persistence, and routing follow the agreed contract; frontend fetches and displays the returned persisted route |
 | 5 | Licensed photos along the hike | Each displayed photo has author, license, sourceUrl, and coordinates; routes/photos follow the existing units and segment shapes |
 | 6 | Gemini embeddings and pgvector ranking | Model/dimension and Flyway schema are agreed; preferences rank places/captions; repeated indexing is idempotent |
@@ -88,6 +88,13 @@ affected owners' responses, even when GitHub's approval minimum is satisfied.
 - Daniil confirmed in PR #28 that replies and clarification questions follow the
   user's message language, while UI labels stay English. Implement that at chat
   wiring. Do not add day-mode fields to the existing chat request incidentally.
+- PR #34 records required frontend integration work: retain chat endpoint Place
+  records/sources alongside fetched routes, reset stale manual endpoints and
+  derive both markers from the new track, deduplicate markers without losing
+  repeated visits, hide empty segments, and parse structured errors. Daniil owns
+  this follow-up; test a direct hike and chat after manual endpoint selection
+  before claiming live route acceptance. His proposal approval is not completed
+  frontend implementation or Murat's API architectural approval.
 - Root .env supplies all services; empty secrets stay in .env.example. Keep cache
   TTLs, explicit timeouts, and fixture-based tests; do not retry paid calls blindly.
 - Before the route MVP is accepted, run the Tatras request, a follow-up, and a
