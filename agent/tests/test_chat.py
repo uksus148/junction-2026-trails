@@ -144,3 +144,5 @@ def test_production_client_has_bounded_timeouts(monkeypatch):
         assert seen["socket_connect_timeout"] == 0.2
         assert seen["socket_timeout"] == 0.3
         assert seen["retry"].get_retries() == 0
+        from redis.asyncio.retry import Retry
+        assert isinstance(seen["retry"], Retry)

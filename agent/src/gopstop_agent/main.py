@@ -7,9 +7,9 @@ from fastapi import Depends, FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from redis.asyncio import Redis, from_url
+from redis.asyncio.retry import Retry
 from redis.backoff import NoBackoff
 from redis.exceptions import RedisError
-from redis.retry import Retry
 
 from gopstop_agent.config import Settings
 from gopstop_agent.sessions import SessionStore, ValkeySessionStore
