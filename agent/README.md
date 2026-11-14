@@ -26,6 +26,11 @@ configure `AGENT_VALKEY_CONNECT_TIMEOUT_SECONDS` and
 `AGENT_VALKEY_SOCKET_TIMEOUT_SECONDS` to change them. Timeouts return the same 503
 as connection failures. These settings are listed in the root `.env.example`.
 
+If port 5173 is busy, Vite may start the frontend on 5174. Check the URL printed
+by Vite and add that exact origin to `AGENT_CORS_ORIGINS` in the root `.env`, for
+example `AGENT_CORS_ORIGINS=["http://localhost:5173","http://localhost:5174"]`.
+Restart the agent after changing this setting so the browser preflight succeeds.
+
 ## Chat contract
 
 ```http
