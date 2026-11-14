@@ -1,4 +1,5 @@
-// Reference day planner. Backend ports this 1:1 (see CLAUDE.md), so keep it pure and dependency-free.
+// Proposed reference day planner (see docs/CONTRACT_REVIEW.md). If the api and agent owners agree,
+// the backend can port it as is, so keep it pure and dependency-free.
 import type { DayPlan, DropReason, DroppedPlace, ItineraryStop, LatLon, Place, Preferences, ReplanRequest, TravelMode } from '../types'
 import { haversineKm, round1, TRAIL_WINDING_FACTOR } from './geo'
 import { filterAndScore, PACE_PROFILES, type ScoredPlace } from './preferences'
