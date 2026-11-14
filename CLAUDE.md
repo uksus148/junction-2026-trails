@@ -42,7 +42,7 @@ Use partner credits and free tiers. All times in this document are local to the 
 | Need | Provider | Team cost |
 |---|---|---|
 | Place and photo web search | **Exa**, $50 × 3 = $150 | Partner credits |
-| Agent LLM | **Claude**, $20 × 3, `claude-haiku-5-5` by default and `claude-sonnet-5-5` for planning | Credits |
+| Agent LLM | **Groq GPT OSS** for integration tests; **Anthropic Claude** remains an explicit alternative | Free limits / credits |
 | Embeddings | **Gemini API** | Free credits or free tier |
 | Coding assistance | Codex $100, Claude Code | Credits |
 | Database | **Aiven PostgreSQL** Free with PostGIS and pgvector | Free |
@@ -96,7 +96,7 @@ Agree changes with the affected developers and record them here.
   success, and a matching subsequent bbox/tag search returns the saved place. Separate creation
   requests create separate records; manual creation has no deduplication guarantee. These
   manual-write details were confirmed by the frontend and agent owners in PR #33.
-  The accepted researched-write extension below requires its own API implementation.
+  The accepted researched-write extension below merged in #45.
 - `POST /api/routes` `{start:{lat,lon}, end:{lat,lon}, placeIds[], preferences[]}` → `Route` (api)
 - `GET /api/routes/{id}` → `Route`
 - `POST /api/photos` multipart `{file, lat, lon}` publishes Kafka event `photo.uploaded`
@@ -113,17 +113,15 @@ Mukhamed owns the agent implementation. Agreement is not runtime availability:
 main includes manual creation, persisted routes (#39), the required routing cache (#41),
 and the internal agent handoff (#40). E2 HTTP orchestration merged in #43 after
 both teammates approved; it is fixture-tested and disabled by default.
-Researched ingestion remains API work. Review/merge E1 and verify live preflight before activation. Track those gates
+E1 researched ingestion merged in #45. Verify deployed V3 and live preflight before activation. Track those gates
 and actual runtime evidence in the [integration runbook](docs/INTEGRATION_RUNBOOK.md).
 
-The current E1 implementation branch adds researched ingestion for independent review; it is
-not yet merged. JPA owns persistence with a native conflict-safe insert and a separate
+Merged E1 uses JPA persistence with a native conflict-safe insert and a separate
 canonical read at READ COMMITTED. Flyway V3 enforces OSM identity uniqueness. Its additional
-validation details for affected-owner review are signed-64-bit positive OSM IDs and source
+validation details accepted in #45 are signed-64-bit positive OSM IDs and source
 URLs without embedded credentials or invalid ports. Unknown write fields, including a
 submitted `source`, return 400 rather than being silently ignored. See the
-[ingestion implementation guide](api/INGESTION.md) for evidence and tradeoffs; these
-implementation details do not claim prior agent-owner agreement on additional limits.
+[ingestion implementation guide](api/INGESTION.md) for evidence and tradeoffs.
 
 - **Researched ingestion (D1/D2):** `POST /api/places` adds optional, complete
   `provenance: {sourceUrl, osmType, osmId}`. The URL is HTTP(S), `osmType` is
@@ -184,12 +182,19 @@ implementation details do not claim prior agent-owner agreement on additional li
   Frontend follow-ups #35–#37 are merged; live acceptance remains required.
 
   E2 uses `AGENT_CHAT_ENABLED=false` by default. Enabled startup requires nonblank
-  Claude/Exa keys and a model ID; account/model access is a separate live check.
+  selected LLM/Exa keys and a model ID; account/model access is a separate live check.
   `AGENT_CHAT_TIMEOUT_SECONDS=180` bounds history, discovery, handoff, reply and
   session storage. Existing 20/60/60-second API/discovery/handoff defaults remain;
   the runbook's 30/90-second diagnostic values are proposals for owner review.
   Both owners reviewed activation, budgets and chat behavior in #43; actual
   latency/provider/proxy budgets still need live-preflight measurement.
+
+  Mukhamed requested Groq for live integration tests. This PR adds
+  `AGENT_LLM_PROVIDER=groq`, `GROQ_API_KEY`, `AGENT_GROQ_MODEL=openai/gpt-oss-120b`
+  and shared transport for all three model tasks. Anthropic remains compatible;
+  no public fields change. The root example selects Groq and a 90-second discovery
+  diagnostic budget; code defaults remain 60/60/180 seconds for discovery/handoff/chat.
+  Activation follows [the live test guide](agent/LIVE_TEST.md) after review and E4.
 
 ### Route implementation selected by Murat
 

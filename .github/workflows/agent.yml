@@ -1,0 +1,29 @@
+name: Agent checks
+
+on:
+  pull_request:
+    paths:
+      - 'agent/**'
+      - '.env.example'
+      - '.github/workflows/agent.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  agent:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - uses: astral-sh/setup-uv@v7
+      - name: Validate agent without live credentials
+        working-directory: agent
+        run: |
+          uv run --frozen --extra test pytest -q
+          uv run --frozen python -m compileall -q src tests
