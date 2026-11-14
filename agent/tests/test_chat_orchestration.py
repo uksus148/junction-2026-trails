@@ -17,6 +17,7 @@ from gopstop_agent.main import create_app
 from gopstop_agent.trails_api import HandoffError, NoHikingRoute
 from test_discovery import provider_fixture, row, tool
 from test_handoff import ApiFixture, discovery
+from test_groq import completion
 from test_trails_api import place, route
 
 
@@ -56,6 +57,8 @@ async def test_http_factories_preserve_sources_history_and_saved_route_with_safe
         if request.url.host == "api.groq.com":
             assert provider == "groq" and request.headers["Authorization"] == "Bearer fixture-groq-secret"
             assert body["model"] == "openai/gpt-oss-20b"
+            parameters = json.dumps(body["tools"][0]["function"]["parameters"])
+            assert '"$ref"' not in parameters and '"$defs"' not in parameters
             name = body["tool_choice"]["function"]["name"]
             adapted = httpx.Request("POST", "https://api.anthropic.com/v1/messages", json={
                 "tool_choice": {"name": name}, "messages": body["messages"][1:],
@@ -96,6 +99,44 @@ async def test_http_factories_preserve_sources_history_and_saved_route_with_safe
                   "routing_cache", "route_readback", "reply", "session_save"):
         assert f"stage={stage}" in caplog.text
     assert "private-session" not in caplog.text and "fixture-claude-secret" not in caplog.text
+
+
+@pytest.mark.parametrize("bad", [
+    {"place": "Skok (waterfall)", "sourceIndex": 0, "tags": ["waterfall"]},
+    {"place": {"canonicalName": "Skok", "region": "High Tatras, Slovakia", "sourceIndex": 0}},
+    "tool_use_failed",
+])
+async def test_groq_reported_resolution_failures_never_ingest_or_save_success(build_app, bad):
+    api, resolution_calls = ApiFixture(), []
+    providers = provider_fixture({"start": "Skok", "end": "Skok"},
+                                 {"Skok": ("Skok", [row(1, "Skok", 49.14, 20.05)])}, [])
+
+    def handle(request):
+        if request.url.host == "api.example":
+            return api(request)
+        if request.url.host != "api.groq.com":
+            return providers(request)
+        body = json.loads(request.content)
+        name = body["tool_choice"]["function"]["name"]
+        if name == "resolve_place":
+            resolution_calls.append(request)
+            if bad == "tool_use_failed":
+                return httpx.Response(400, json={"error": {
+                    "code": "tool_use_failed", "message": "private provider diagnostic",
+                    "failed_generation": {"place": "Skok (waterfall)"},
+                }})
+            return httpx.Response(200, json=completion(value=bad))
+        assert name == "extract_route_intent"
+        return httpx.Response(200, json=completion(name=name, value={"start": "Skok", "end": "Skok"}))
+
+    app, cache, _ = build_app(handle, llm_provider="groq", groq_api_key="fixture-groq-secret",
+                               anthropic_api_key="")
+    with TestClient(app) as client:
+        response = client.post("/api/chat", json={"sessionId": "invalid-resolution", "message": "Find Skok"})
+    assert response.status_code == 502 and "private" not in response.text
+    assert len(resolution_calls) == 1  # No retry or repair from failed_generation.
+    assert api.calls == [] and await cache.llen("gopstop:chat-session:invalid-resolution") == 0
+    assert await cache.keys("gopstop:place-resolution:*") == []
 
 
 @pytest.mark.parametrize("operation", ["get", "set"])
