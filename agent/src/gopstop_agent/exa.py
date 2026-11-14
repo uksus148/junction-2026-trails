@@ -26,8 +26,9 @@ sources_adapter = TypeAdapter(list[ResearchSource])
 
 class ExaSearch:
     def __init__(self, client: httpx.AsyncClient, redis: Redis, api_key: str,
-                 timeout_seconds: float = 20) -> None:
+                 timeout_seconds: float = 20, *, cache_namespace: str = "gopstop:exa-text:v1") -> None:
         self._client, self._redis, self._api_key = client, redis, api_key
+        self._cache_namespace = cache_namespace
         self._timeout = httpx.Timeout(timeout_seconds)
 
     async def search(self, query: str) -> list[ResearchSource]:
@@ -37,7 +38,7 @@ class ExaSearch:
         request_body = {"query": query, "type": "auto", "numResults": 3,
                         "contents": {"text": {"maxCharacters": 2000}}}
         digest = hashlib.sha256(json.dumps(request_body, sort_keys=True).encode()).hexdigest()
-        key = f"gopstop:exa-text:v1:{digest}"
+        key = f"{self._cache_namespace}:{digest}"
         # Fail before spending credits when the cache is unavailable.
         cached = await self._redis.get(key)
         if cached is not None:
