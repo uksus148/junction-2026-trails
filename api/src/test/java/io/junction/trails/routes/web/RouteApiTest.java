@@ -275,6 +275,24 @@ class RouteApiTest {
     }
 
     @Test
+    void retainsResearchSourcesAndRepeatedVisitsThroughSavedRouteReadback() {
+        var payload = Map.of("name", "Research viewpoint", "lat", 49.07, "lon", 20.08, "tags", List.of("viewpoint"),
+                "provenance", Map.of("sourceUrl", "https://example.org/research", "osmType", "node", "osmId", 42));
+        var place = http.postForEntity("/api/places", payload, JsonNode.class);
+        assertThat(place.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        var replay = http.postForEntity("/api/places", payload, JsonNode.class);
+        assertThat(replay.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(replay.getBody()).isEqualTo(place.getBody());
+        String id = place.getBody().get("id").asText();
+        var route = create(List.of(id, id));
+        assertThat(route.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(route.getBody().get("places").get(0)).isEqualTo(place.getBody());
+        assertThat(route.getBody().get("places").get(1)).isEqualTo(place.getBody());
+        assertThat(http.getForEntity("/api/routes/" + route.getBody().get("id").asText(), JsonNode.class).getBody())
+                .isEqualTo(route.getBody());
+    }
+
+    @Test
     void resolvesEveryUuidBeforeCallingTheProvider() {
         var response = create(List.of(FIRST, UUID.randomUUID().toString()));
         assertProblem(response.getStatusCode(), response.getBody(), 422, "unknown_place");

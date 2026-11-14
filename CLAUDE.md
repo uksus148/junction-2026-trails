@@ -116,6 +116,15 @@ both teammates approved; it is fixture-tested and disabled by default.
 Researched ingestion remains API work. Review/merge E1 and verify live preflight before activation. Track those gates
 and actual runtime evidence in the [integration runbook](docs/INTEGRATION_RUNBOOK.md).
 
+The current E1 implementation branch adds researched ingestion for independent review; it is
+not yet merged. JPA owns persistence with a native conflict-safe insert and a separate
+canonical read at READ COMMITTED. Flyway V3 enforces OSM identity uniqueness. Its additional
+validation details for affected-owner review are signed-64-bit positive OSM IDs and source
+URLs without embedded credentials or invalid ports. Unknown write fields, including a
+submitted `source`, return 400 rather than being silently ignored. See the
+[ingestion implementation guide](api/INGESTION.md) for evidence and tradeoffs; these
+implementation details do not claim prior agent-owner agreement on additional limits.
+
 - **Researched ingestion (D1/D2):** `POST /api/places` adds optional, complete
   `provenance: {sourceUrl, osmType, osmId}`. The URL is HTTP(S), `osmType` is
   `node|way|relation`, and `osmId` is a positive integer. Manual clients omit it.
@@ -338,7 +347,7 @@ Role-specific skills listed in the original team plan follow.
 - November 14 — Every PR requires review and approval by at least one developer other than the author, including internal changes that affect no other component. Request review from owners of the components affected by a PR. GitHub requires one independent approval. Additional reviewers are selected when their components or shared contracts are affected. Murat's assistant reviews backend, shared infrastructure, repository governance, and backend-facing integration. In a stack, retarget the next PR to main before merging it (#14 and #15 landed in stack branches and were re-landed in #21).
 - November 14 — The hiking-intent adapter uses Claude tool use with a validated `{start, end, mustSee[], preferences[]}` result and at most six recent session exchanges. Blank values are normalized; results exceeding five intermediate stops or twelve preferences require user clarification. Provider requests have explicit timeouts and no automatic paid retries. The HTTP chat contract stays on the baseline; connecting intent and place discovery is a later block.
 - November 14 — The internal Exa text-research adapter retains source URLs and caches responses in Valkey for 24 hours. [The agent delivery plan](docs/AGENT_PLAN.md) records sequential blocks and unresolved integration gates; shared API/schema/event proposals remain unapproved until the affected owners agree.
-- November 14 — The agent's internal place-resolution cache is prepared for review:
+- November 14 — The agent's internal place-resolution cache merged in #44:
   cache validated Claude results (including unresolved) for 24 hours by the full
   effective request hash: model, prompt/schema, description and ordered evidence.
   Preserve source binding; refresh corrupt entries, surface cache outages without
@@ -351,6 +360,12 @@ Role-specific skills listed in the original team plan follow.
   deduplication, ordered route persistence, structured errors and chat completion.
   These decisions are now published above. Internal agent handoff is fixture-tested;
   enabling HTTP chat still requires the API handlers and live acceptance.
+
+- November 14 — E4 live backend preflight passed against Aiven PostgreSQL/Valkey and
+  ORS using the local E1 branch in an isolated schema. Flyway V1-V3, Hibernate validation,
+  route creation/readback and cache reuse with the ORS key disabled passed. Diagnostic
+  data was removed. This is not E1 merge, enabled live chat or browser/E5 acceptance;
+  see the [recorded E4 evidence](docs/INTEGRATION_RUNBOOK.md#e4-live-backend-evidence).
 
 ## Open questions and completed checks
 
