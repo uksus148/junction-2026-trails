@@ -29,9 +29,9 @@ Connect the original chat, places, and route flow to live services first. Discus
 
 Before implementing the relevant HTTP handlers, the backend will propose identifier types, success and error status codes, and the photo upload response in a dedicated PR. Review those details with the frontend and agent.
 
-## Proposed hiking route handoff after PR #31
+## Accepted hiking route handoff after PR #34
 
-[The agent/API handoff proposal](AGENT_API_HANDOFF.md) supplies concrete examples
+[The accepted agent/API handoff contract](AGENT_API_HANDOFF.md) supplies concrete examples
 for optional research provenance on place creation, OSM deduplication into API
 UUIDs, ordered route persistence, machine-readable errors, and chat completion.
 Murat explicitly accepted D1–D4 and Daniil D1/D3/D4/D5 in merged PR #34;

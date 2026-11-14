@@ -1,6 +1,8 @@
 # trego. Agent
 
-The agent is a FastAPI service implementing the baseline `POST /api/chat` contract. This first block validates requests, stores each user/assistant exchange in Valkey, and returns an honest placeholder response with no discovered places until the intent and search integrations are implemented.
+The FastAPI `POST /api/chat` endpoint validates requests, stores exchanges in Valkey,
+and returns a placeholder. Internal discovery and route handoff are available for
+fixture-tested composition; HTTP orchestration is not enabled yet.
 
 ## Run locally
 
@@ -116,3 +118,39 @@ startup yet; HTTP chat behavior is unchanged. API ingestion and route handoff
 remain behind owner agreement. At chat wiring, use the user's message language
 for normal and clarification replies, as agreed with Daniil in PR #28; UI labels
 remain English.
+
+## Persisted route handoff
+
+The [accepted D1–D5 contract](../CLAUDE.md#accepted-sourced-place-and-route-handoff)
+is published after both owner approvals in #34. `create_handoff(client, settings)`
+composes `RouteHandoff`; `await handoff.persist(discovery_result)` accepts only a
+complete resolved discovery. It ingests sourced places through the API, reuses
+OSM type/ID writes within the operation, and uses the authoritative UUIDs and
+coordinates returned by the API. It never invents IDs or drops repeated visits.
+
+The route POST contains only intermediate UUIDs in visit order. The result is
+validated as a full Route and then fetched by ID; mismatched IDs/stops, malformed
+geometry, invalid units/coordinates, or a failed readback produce an error.
+`HandoffResult` holds the saved route, persisted place records deduplicated only
+for display, and OSM attribution. Original discovery evidence is left intact.
+
+Only a complete 422 Problem Detail with `code: "no_hiking_route"` raises
+`NoHikingRoute` for a normal chat reply. Other failures raise safe `HandoffError`
+with a future HTTP status of 502/503/504 and no remote body. Neither POST retries
+nor redirects are followed; lost responses/deadlines may leave saved data behind.
+There is no cross-service rollback or generated fallback route.
+
+Root settings: `AGENT_API_BASE_URL` defaults to `http://localhost:8080`;
+`AGENT_API_TIMEOUT_SECONDS` defaults to 20 seconds per API call and
+`AGENT_HANDOFF_TIMEOUT_SECONDS` to 60 seconds for ingestion/create/readback together.
+This internal deadline does not replace a future total chat deadline covering
+discovery, handoff, and session storage.
+
+The factory is not wired into HTTP chat. Main currently has manual place creation
+only; its ignored provenance/server-owned manual source is rejected by this
+client. That rejection cannot undo an already committed place. Enable live use
+only after researched ingestion and routes implement the accepted contract;
+this client is not a capability probe. Tests use HTTP fixtures, including repeats,
+direct hikes, first-write replay, incomplete intent, provider/storage failures,
+malformed responses, possible partial writes, and cancellation. Live API/ORS,
+locale-aware replies, and the frontend route flow remain acceptance work.

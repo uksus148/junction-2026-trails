@@ -306,9 +306,14 @@ Role-specific skills listed in the original team plan follow.
 - November 14 — Every PR requires review and approval by at least one developer other than the author, including internal changes that affect no other component. Request review from owners of the components affected by a PR. GitHub requires one independent approval. Additional reviewers are selected when their components or shared contracts are affected. Murat's assistant reviews backend, shared infrastructure, repository governance, and backend-facing integration. In a stack, retarget the next PR to main before merging it (#14 and #15 landed in stack branches and were re-landed in #21).
 - November 14 — The hiking-intent adapter uses Claude tool use with a validated `{start, end, mustSee[], preferences[]}` result and at most six recent session exchanges. Blank values are normalized; results exceeding five intermediate stops or twelve preferences require user clarification. Provider requests have explicit timeouts and no automatic paid retries. The HTTP chat contract stays on the baseline; connecting intent and place discovery is a later block.
 - November 14 — The internal Exa text-research adapter retains source URLs and caches responses in Valkey for 24 hours. [The agent delivery plan](docs/AGENT_PLAN.md) records sequential blocks and unresolved integration gates; shared API/schema/event proposals remain unapproved until the affected owners agree.
-- November 14 — Internal place discovery combines intent, source-grounded resolution, and cached, rate-limited Nominatim lookup. The merged place API returns UUID strings; discovery findings retain research and OSM identity separately. The HTTP chat contract stays unchanged, and API write/route handoff remains pending owner agreement. Daniil confirmed in PR #28 that chat and clarification replies follow the user's message language, while UI labels remain English.
+- November 14 — Internal place discovery combines intent, source-grounded resolution, and cached, rate-limited Nominatim lookup. The merged place API returns UUID strings; discovery findings retain research and OSM identity separately. The HTTP chat contract stays unchanged; API write/route handoff needed owner agreement at this stage (subsequently accepted in #34). Daniil confirmed in PR #28 that chat and clarification replies follow the user's message language, while UI labels remain English.
 
 - November 14 — Murat selected Spring Data JPA for ordinary API persistence, with Hibernate Spatial for PostGIS mapping. Native JPA queries preserve the current spatial filters; JDBC remains an option for complex queries. Flyway continues to own schema changes, and application services own transaction boundaries. The implementation and shared documentation changes require the normal PR review.
+
+- November 14 — PR #34's final owner approvals accept researched provenance/OSM
+  deduplication, ordered route persistence, structured errors and chat completion.
+  These decisions are now published above. Internal agent handoff is fixture-tested;
+  enabling HTTP chat still requires the API handlers and live acceptance.
 
 ## Open questions and completed checks
 
