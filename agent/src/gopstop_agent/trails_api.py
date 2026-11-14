@@ -21,6 +21,10 @@ class NoHikingRoute(Exception):
     """A verified no-route result, distinct from a dependency outage."""
 
 
+class WaypointNotRoutable(Exception):
+    """A verified failure to match a waypoint to the available routing network."""
+
+
 url_adapter = TypeAdapter(HttpUrl)
 
 
@@ -32,7 +36,7 @@ class TrailsApi:
         self._timeout = httpx.Timeout(timeout_seconds)
 
     async def _request(self, method: str, path: str, success: tuple[int, ...],
-                       *, payload: dict | None = None, allow_no_route: bool = False) -> httpx.Response:
+                       *, payload: dict | None = None, allow_route_problem: bool = False) -> httpx.Response:
         try:
             response = await self._client.request(
                 method, self._base + path, json=payload, timeout=self._timeout,
@@ -44,13 +48,16 @@ class TrailsApi:
             raise HandoffError("Trail API is temporarily unavailable.") from exc
         if response.status_code in success:
             return response
-        if allow_no_route and response.status_code == 422:
+        if allow_route_problem and response.status_code == 422:
             try:
                 problem = ApiProblem.model_validate_json(response.content)
             except ValidationError:
                 problem = None
-            if problem and problem.status == 422 and problem.code == "no_hiking_route":
-                raise NoHikingRoute("No walking route connects the requested waypoints.")
+            if problem and problem.status == 422:
+                if problem.code == "no_hiking_route":
+                    raise NoHikingRoute("No walking route connects the requested waypoints.")
+                if problem.code == "waypoint_not_routable":
+                    raise WaypointNotRoutable("A waypoint could not be matched to the available hiking network.")
         status = response.status_code if response.status_code in (503, 504) else 502
         raise HandoffError("Trail API could not complete the operation.", status)
 
@@ -75,7 +82,7 @@ class TrailsApi:
 
     async def create_route(self, start: ApiPlace, end: ApiPlace, stops: list[ApiPlace],
                            preferences: list[str]) -> ApiRoute:
-        response = await self._request("POST", "/api/routes", (201,), allow_no_route=True, payload={
+        response = await self._request("POST", "/api/routes", (201,), allow_route_problem=True, payload={
             "start": {"lat": start.lat, "lon": start.lon},
             "end": {"lat": end.lat, "lon": end.lon},
             "placeIds": [str(place.id) for place in stops], "preferences": preferences,

@@ -158,14 +158,18 @@ Errors use `application/problem+json` with English `detail` and a stable `code`.
 | 400 | `invalid_request` | Invalid or missing fields, UUID syntax, coordinates, or too many visits |
 | 404 | `route_not_found` | Saved route UUID does not exist |
 | 422 | `unknown_place` | A referenced place UUID does not exist |
-| 422 | `no_hiking_route` | ORS explicitly reports no route or an unroutable point |
+| 422 | `no_hiking_route` | ORS 2009: no route between the requested locations |
+| 422 | `waypoint_not_routable` | ORS 2010: a waypoint cannot be matched within the provider search radius |
 | 502 | `routing_provider_error` | Provider/network/configuration failure or malformed response |
 | 503 | `storage_unavailable` | Storage connection or transaction failure |
 | 503 | `cache_unavailable` | Required cache read/write/timeout failure or invalid cached data |
 | 504 | `routing_timeout` | Routing exceeded its configured deadline |
 
-Only recognized ORS no-route codes on an appropriate client-error response become
-`no_hiking_route`. Unknown errors, quota failures, authentication failures, and generic
+Issue #49 splits numeric ORS 2009/2010 on HTTP 400/404 into the two 422 outcomes above;
+affected-owner review of this extension is pending. Neither confirms a trail closure,
+difficulty filter or seasonal cause. The adapter never widens the radius, changes providers,
+drops waypoints or retries for success. See [demo verification](../docs/ROUTING_DIAGNOSTICS.md).
+Unknown errors, quota failures, authentication failures, and generic
 provider 404s remain provider errors. SQL programming/constraint errors are not silently
 classified as user mistakes. The required cache is never silently bypassed.
 

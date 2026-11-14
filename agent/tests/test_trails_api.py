@@ -5,7 +5,7 @@ import httpx
 import pytest
 
 from gopstop_agent.discovery import DiscoveredPlace
-from gopstop_agent.trails_api import HandoffError, NoHikingRoute, TrailsApi
+from gopstop_agent.trails_api import HandoffError, NoHikingRoute, TrailsApi, WaypointNotRoutable
 
 
 def identifier(index):
@@ -77,11 +77,15 @@ async def test_invalid_or_manual_place_response_fails_closed(overrides):
 
 @pytest.mark.parametrize("status,body,expected", [
     (422, problem(), NoHikingRoute),
+    (422, problem("waypoint_not_routable"), WaypointNotRoutable),
+    (422, {"code": "waypoint_not_routable"}, HandoffError),
+    (422, problem("waypoint_not_routable", status=503), HandoffError),
     (422, problem("unknown_place"), HandoffError),
     (422, {"code": "no_hiking_route"}, HandoffError),
     (422, problem(status=503), HandoffError),
     (503, problem(), HandoffError),
     (502, problem(), HandoffError),
+    (502, problem("waypoint_not_routable"), HandoffError),
 ])
 async def test_only_verified_route_problem_is_a_normal_no_route_result(status, body, expected):
     from gopstop_agent.api_models import ApiPlace

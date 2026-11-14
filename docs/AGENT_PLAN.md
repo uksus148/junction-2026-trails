@@ -84,8 +84,9 @@ These questions need the affected owners' answers, not unilateral agent changes:
 - **Routing: Murat + Mukhamed + Daniil.** D3/D4 are accepted. The internal client
   submits returned endpoint coordinates and ordered/repeated intermediate UUIDs,
   validates the full created Route, then GETs the saved route before success.
-  Only a complete 422 `no_hiking_route` problem is a normal no-route outcome;
-  dependency failures remain errors. E2 composes these adapters with language-aware
+  A complete 422 `no_hiking_route` problem is a normal no-path outcome. Issue #49's
+  extension under review adds a distinct normal `waypoint_not_routable` clarification;
+  neither establishes closure/season/difficulty. Dependency failures remain errors. E2 composes these adapters with language-aware
   replies, session handling and a 180-second overall deadline; merged after both reviews.
 - **Photos and vectors: Murat + Mukhamed.** Agree entity keys, source metadata,
   caption storage, Gemini model, output dimension, and upsert semantics before

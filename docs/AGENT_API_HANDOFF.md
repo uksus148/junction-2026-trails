@@ -155,6 +155,7 @@ to choose chat behavior. Existing GET /api/places errors are unaffected.
 | 400 | `invalid_request` | Invalid fields, coordinates, UUID syntax, or unsupported waypoint count |
 | 422 | `unknown_place` | A referenced place UUID does not exist |
 | 422 | `no_hiking_route` | Provider returned a valid no-route result for these waypoints |
+| 422 | `waypoint_not_routable` | Issue #49 extension under review: a waypoint could not be matched to the hiking network within the provider radius |
 | 502 | `routing_provider_error` | Provider failed or returned malformed data |
 | 503 | `storage_unavailable` | Required persistence is unavailable |
 | 503 | `cache_unavailable` | Required routing cache is unavailable; no blind uncached retry |
@@ -171,8 +172,12 @@ to choose chat behavior. Existing GET /api/places errors are unaffected.
 }
 ```
 
-Only a verified `no_hiking_route` result becomes a normal chat reply asking for
-different endpoints/stops. Provider or cache outages must not masquerade as
+The issue #49 extension, pending affected-owner review, distinguishes verified
+`no_hiking_route` (ORS 2009) from `waypoint_not_routable` (ORS 2010). The former asks
+for different endpoints/stops; the latter asks to verify coordinates or choose another
+point. Neither establishes a closure or difficulty/seasonal cause. No radius increase,
+substitution or automatic retry is introduced. See [live evidence](ROUTING_DIAGNOSTICS.md).
+Provider or cache outages must not masquerade as
 "no route". Agent-side HTTP errors retain FastAPI's existing `detail` envelope:
 503 for storage/cache failure, 502 for dependency failures or an invalid API
 response, and 504 for the overall deadline. An `unknown_place` after successful

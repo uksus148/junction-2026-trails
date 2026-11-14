@@ -317,6 +317,22 @@ class RouteApiTest {
         assertThat(routeCount()).isZero();
     }
 
+    @Test
+    void returnsAnUnmatchedWaypointWithoutRetryingRelaxingOrSaving() {
+        ORS.respond(404, "{\"error\":{\"code\":2010,\"message\":\"private upstream closure speculation\"}}", 0);
+        var response = create(List.of(FIRST));
+        assertProblem(response.getStatusCode(), response.getBody(), 422, "waypoint_not_routable");
+        assertThat(response.getBody().get("detail").asText()).contains("hiking network", "search radius")
+                .doesNotContain("closure", "private", "difficulty");
+        assertThat(ORS.getRequests()).hasSize(1);
+        var sent = ORS.getRequests().getFirst();
+        assertThat(sent.path()).isEqualTo("/ors/v2/directions/foot-hiking/geojson");
+        assertThat(sent.body().has("radiuses")).isFalse();
+        assertThat(sent.body().has("options")).isFalse();
+        assertThat(routeCount()).isZero();
+        assertThat(valkey.keys(RoutingCacheKey.PREFIX + "*")).isEmpty();
+    }
+
     @ParameterizedTest
     @ValueSource(ints = {401, 429, 500, 503})
     void doesNotRetryOrPersistProviderFailures(int status) {
